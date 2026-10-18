@@ -1,0 +1,11 @@
+# A scorched inner world, close to its star.
+name = Ember
+kind = terrestrial
+mass = 3.3e23
+radius = 2440
+orbit = 0.39
+ecc = 0.09
+color1 = #ffb27a
+color2 = #7a2a12
+accent = #ffcf9a
+note = Airless rock with a molten day side.
