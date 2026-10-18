@@ -1,757 +1,209 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="aero-night">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Solar System Sandbox — a real solar system on Windows 7</title>
-<meta name="description" content="A real-time solar system simulator and N-body gravity sandbox for Windows 7 SP1 and later. JPL approximate ephemerides, five Aero themes, drop-in content folders, a 320 KB native app and a 2.2 MB installer.">
+<title>Solar System Sandbox</title>
+<meta name="description" content="A real-time solar system simulator and N-body gravity sandbox in your browser: JPL approximate ephemerides, five colour themes, drop-in scenario files.">
 <meta name="theme-color" content="#0b111f">
 <link rel="icon" href="assets/icon.ico" sizes="any">
-<link rel="canonical" href="https://testid001772.github.io/solar-system-sandbox-simulator/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Solar System Sandbox">
-<meta property="og:title" content="Solar System Sandbox — planets on real ephemerides, gravity on your terms">
-<meta property="og:description" content="40 bodies from JPL's approximate ephemerides, a velocity-Verlet N-body sandbox, five Aero themes and drop-in content folders — in a 320 KB Windows 7 app.">
-<meta property="og:url" content="https://testid001772.github.io/solar-system-sandbox-simulator/">
-<meta property="og:image" content="https://testid001772.github.io/solar-system-sandbox-simulator/docs/screenshots/overview.png">
-<meta name="twitter:card" content="summary_large_image">
-<style>
-/* ---------------------------------------------------------------- tokens */
-:root{
-  --bg0:#060911; --bg1:#0b111f; --bg2:#0c1424;
-  --panel:rgba(24,37,62,.72); --panel-2:rgba(15,24,41,.86);
-  --line:rgba(132,178,255,.16); --line-2:rgba(132,178,255,.30);
-  --text:#e8f0ff; --muted:#9eb0cd; --faint:#7d90ab;
-  --accent:#56a0ff; --accent-2:#8cc4ff; --deep:#2256a4;
-  --green:#68d6a8; --amber:#ffc46e; --violet:#b294ff;
-  --radius:16px; --radius-s:10px;
-  --shadow:0 24px 60px rgba(0,0,0,.45);
-  --font:"Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,"Helvetica Neue",Arial,sans-serif;
-  --mono:"Consolas","Cascadia Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-}
-*,*::before,*::after{box-sizing:border-box}
-html{scroll-behavior:smooth;color-scheme:dark}
-body{
-  margin:0;font-family:var(--font);color:var(--text);line-height:1.65;
-  background:
-    radial-gradient(1100px 700px at 12% 4%, rgba(44,26,78,.38), transparent 62%),
-    radial-gradient(1000px 760px at 92% 82%, rgba(28,52,104,.34), transparent 64%),
-    linear-gradient(180deg,var(--bg0) 0%,var(--bg1) 38%,var(--bg2) 100%);
-  background-attachment:fixed;
-  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
-  overflow-x:hidden;
-}
-body::before{
-  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.62;
-  background-image:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxNDAwJyBoZWlnaHQ9JzEwMDAnPjxjaXJjbGUgY3g9JzYzMycgY3k9JzU2MCcgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQ2Jy8+PGNpcmNsZSBjeD0nMjY2JyBjeT0nODA0JyByPScwLjgnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNTcnLz48Y2lyY2xlIGN4PScxMzInIGN5PSczMDMnIHI9JzAuNScgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41MScvPjxjaXJjbGUgY3g9Jzg4OCcgY3k9JzU5NScgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjc4Jy8+PGNpcmNsZSBjeD0nODYyJyBjeT0nMTU3JyByPScwLjUnIGZpbGw9JyNmZmUyYmEnIG9wYWNpdHk9JzAuNzAnLz48Y2lyY2xlIGN4PSc1MCcgY3k9Jzg4MCcgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjIwJy8+PGNpcmNsZSBjeD0nNjE3JyBjeT0nODQyJyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMzInLz48Y2lyY2xlIGN4PSc2JyBjeT0nODUnIHI9JzEuMicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4zNScvPjxjaXJjbGUgY3g9JzEzOTQnIGN5PSc4NDAnIHI9JzEuMicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4zNCcvPjxjaXJjbGUgY3g9JzcxOCcgY3k9JzMwJyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNjYnLz48Y2lyY2xlIGN4PScxMTg1JyBjeT0nMzg3JyByPScwLjUnIGZpbGw9JyNmZmUyYmEnIG9wYWNpdHk9JzAuNzEnLz48Y2lyY2xlIGN4PScyOTQnIGN5PSc5MTAnIHI9JzAuOCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC40MScvPjxjaXJjbGUgY3g9JzU4OCcgY3k9JzU2Nicgcj0nMC42JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjY2Jy8+PGNpcmNsZSBjeD0nMTIyJyBjeT0nMzMzJyByPScwLjgnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNjUnLz48Y2lyY2xlIGN4PSczNDUnIGN5PScxMDEnIHI9JzAuNScgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC40NycvPjxjaXJjbGUgY3g9Jzk1NScgY3k9JzE4OCcgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjMwJy8+PGNpcmNsZSBjeD0nMTgzJyBjeT0nNjQ0JyByPScwLjUnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNDInLz48Y2lyY2xlIGN4PScxJyBjeT0nODY0JyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMzcnLz48Y2lyY2xlIGN4PScyOTUnIGN5PSczOTQnIHI9JzEuMCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41OCcvPjxjaXJjbGUgY3g9JzEzODUnIGN5PScyMTMnIHI9JzAuNycgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4xOScvPjxjaXJjbGUgY3g9JzExNjInIGN5PSczODYnIHI9JzAuNScgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4yNCcvPjxjaXJjbGUgY3g9JzM0MCcgY3k9JzYwMScgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjU3Jy8+PGNpcmNsZSBjeD0nODIyJyBjeT0nODMyJyByPScwLjYnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzInLz48Y2lyY2xlIGN4PScyMTYnIGN5PSc5MDgnIHI9JzEuMCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4zMycvPjxjaXJjbGUgY3g9JzEwMzUnIGN5PSc5NDAnIHI9JzAuNicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC42MScvPjxjaXJjbGUgY3g9JzY3NicgY3k9Jzc4JyByPScwLjUnIGZpbGw9JyNmZmUyYmEnIG9wYWNpdHk9JzAuMjQnLz48Y2lyY2xlIGN4PScxMzQ4JyBjeT0nMjM4JyByPScxLjInIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNDInLz48Y2lyY2xlIGN4PScxMjY3JyBjeT0nNDkxJyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMjknLz48Y2lyY2xlIGN4PSc5NicgY3k9JzIyOCcgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjU5Jy8+PGNpcmNsZSBjeD0nMTA0JyBjeT0nMjEyJyByPScwLjYnIGZpbGw9JyNmZmUyYmEnIG9wYWNpdHk9JzAuNjQnLz48Y2lyY2xlIGN4PSc1NzYnIGN5PScyNDknIHI9JzAuNScgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4yOScvPjxjaXJjbGUgY3g9JzgwMScgY3k9JzEzMicgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjI3Jy8+PGNpcmNsZSBjeD0nNDYzJyBjeT0nNzMzJyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNTQnLz48Y2lyY2xlIGN4PSc0OScgY3k9JzE4JyByPScwLjcnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNjEnLz48Y2lyY2xlIGN4PSczMCcgY3k9JzYzNicgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjIyJy8+PGNpcmNsZSBjeD0nMTkxJyBjeT0nNzInIHI9JzAuOCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41MicvPjxjaXJjbGUgY3g9JzEyNjAnIGN5PSc3MzcnIHI9JzEuMicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4yNicvPjxjaXJjbGUgY3g9JzQ3OCcgY3k9Jzg1JyByPScwLjgnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzQnLz48Y2lyY2xlIGN4PSc1ODQnIGN5PSc3OTEnIHI9JzAuOCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41NCcvPjxjaXJjbGUgY3g9JzUzNScgY3k9JzU4Mycgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjIyJy8+PGNpcmNsZSBjeD0nMTYyJyBjeT0nMjU3JyByPScwLjgnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNjMnLz48Y2lyY2xlIGN4PScxMDI5JyBjeT0nNTgxJyByPScwLjgnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNDcnLz48Y2lyY2xlIGN4PSc3MjYnIGN5PSc1MTUnIHI9JzAuNycgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41NScvPjxjaXJjbGUgY3g9JzMyMicgY3k9JzY5OCcgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjY2Jy8+PGNpcmNsZSBjeD0nNjgxJyBjeT0nODk2JyByPScwLjcnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMzcnLz48Y2lyY2xlIGN4PScyODQnIGN5PScxNzAnIHI9JzAuNycgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41OScvPjxjaXJjbGUgY3g9JzEyNDgnIGN5PSczMjcnIHI9JzEuMicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4zNCcvPjxjaXJjbGUgY3g9JzExMjUnIGN5PSc3NTUnIHI9JzAuNicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC43MycvPjxjaXJjbGUgY3g9JzgxNicgY3k9JzMxNicgcj0nMC42JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjI2Jy8+PGNpcmNsZSBjeD0nMTI1NCcgY3k9JzQxJyByPScwLjUnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzcnLz48Y2lyY2xlIGN4PScyMzcnIGN5PSc0NTEnIHI9JzAuNycgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC43NScvPjxjaXJjbGUgY3g9JzUzNicgY3k9JzUyMCcgcj0nMS4yJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjM4Jy8+PGNpcmNsZSBjeD0nMTM3NScgY3k9JzQ1Micgcj0nMC41JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjY5Jy8+PGNpcmNsZSBjeD0nODUxJyBjeT0nNjc4JyByPScwLjcnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNTMnLz48Y2lyY2xlIGN4PScxMTA4JyBjeT0nMTknIHI9JzAuNicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC40MycvPjxjaXJjbGUgY3g9JzEwNzcnIGN5PScyNjYnIHI9JzAuNicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC42NycvPjxjaXJjbGUgY3g9JzE2MScgY3k9JzEwOScgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjU5Jy8+PGNpcmNsZSBjeD0nMTM0MicgY3k9JzY4NCcgcj0nMC42JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjY5Jy8+PGNpcmNsZSBjeD0nMTAwMCcgY3k9Jzc1NScgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjYyJy8+PGNpcmNsZSBjeD0nMzgxJyBjeT0nMzQ2JyByPScxLjInIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzcnLz48Y2lyY2xlIGN4PScxMzk2JyBjeT0nMTU5JyByPScxLjInIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzQnLz48Y2lyY2xlIGN4PScxMzA2JyBjeT0nNzIyJyByPScwLjYnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNDYnLz48Y2lyY2xlIGN4PScxMjQyJyBjeT0nNycgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjUzJy8+PGNpcmNsZSBjeD0nMTExNScgY3k9Jzk0NCcgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjM4Jy8+PGNpcmNsZSBjeD0nMTM5JyBjeT0nODY2JyByPScxLjInIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzUnLz48Y2lyY2xlIGN4PSczMzknIGN5PSczOTAnIHI9JzAuNScgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC43OScvPjxjaXJjbGUgY3g9JzExMDcnIGN5PSczMjAnIHI9JzEuMicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC43MScvPjxjaXJjbGUgY3g9JzExNicgY3k9JzQ0MScgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQ0Jy8+PGNpcmNsZSBjeD0nMTI4OCcgY3k9JzIxOCcgcj0nMC41JyBmaWxsPScjZmZlMmJhJyBvcGFjaXR5PScwLjQ1Jy8+PGNpcmNsZSBjeD0nNzQ2JyBjeT0nNjg3JyByPScwLjYnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNDcnLz48Y2lyY2xlIGN4PScxMjYxJyBjeT0nNTE4JyByPScxLjInIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNjEnLz48Y2lyY2xlIGN4PSc2OTAnIGN5PSc5NDknIHI9JzAuNScgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC42NScvPjxjaXJjbGUgY3g9Jzc4MicgY3k9JzgzMScgcj0nMS4wJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjU4Jy8+PGNpcmNsZSBjeD0nMTE4MScgY3k9JzU2MCcgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjYwJy8+PGNpcmNsZSBjeD0nMTIxOCcgY3k9JzYwOScgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjcxJy8+PGNpcmNsZSBjeD0nNzM0JyBjeT0nNTczJyByPScwLjYnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNDMnLz48Y2lyY2xlIGN4PSc3JyBjeT0nMzc3JyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzgnLz48Y2lyY2xlIGN4PSc1NjEnIGN5PSc4MDEnIHI9JzEuMCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4yNicvPjxjaXJjbGUgY3g9JzIzMycgY3k9JzkzMScgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQ0Jy8+PGNpcmNsZSBjeD0nMTI5MycgY3k9JzI2OScgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQ5Jy8+PGNpcmNsZSBjeD0nMTI2MScgY3k9JzkzNicgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjUxJy8+PGNpcmNsZSBjeD0nNTg3JyBjeT0nMjknIHI9JzAuNycgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4yNicvPjxjaXJjbGUgY3g9JzMyJyBjeT0nMTk0JyByPScwLjYnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMTknLz48Y2lyY2xlIGN4PScxMDEzJyBjeT0nMjQ0JyByPScwLjgnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMjUnLz48Y2lyY2xlIGN4PScxNzInIGN5PSc1MTAnIHI9JzAuNycgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC42MicvPjxjaXJjbGUgY3g9JzEyMzAnIGN5PScyMycgcj0nMS4yJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQ0Jy8+PGNpcmNsZSBjeD0nMjI0JyBjeT0nMjA0JyByPScxLjInIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNTEnLz48Y2lyY2xlIGN4PSczMDMnIGN5PSc1NDMnIHI9JzEuMCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC43MScvPjxjaXJjbGUgY3g9JzEwMzcnIGN5PSc4MTEnIHI9JzAuNicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4zOCcvPjxjaXJjbGUgY3g9JzEyOTInIGN5PScyMTgnIHI9JzAuNicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC43MycvPjxjaXJjbGUgY3g9JzMzNScgY3k9JzcyNycgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQyJy8+PGNpcmNsZSBjeD0nMTMxOCcgY3k9JzU0Mycgcj0nMS4yJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjI2Jy8+PGNpcmNsZSBjeD0nOTU5JyBjeT0nMTgnIHI9JzAuNicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41MycvPjxjaXJjbGUgY3g9JzExNDknIGN5PSczNjEnIHI9JzEuMicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC40OScvPjxjaXJjbGUgY3g9JzcwNCcgY3k9JzY4Nicgcj0nMC42JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjY4Jy8+PGNpcmNsZSBjeD0nMzQnIGN5PSc3NjInIHI9JzEuMCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41MCcvPjxjaXJjbGUgY3g9JzIwNScgY3k9JzE4NScgcj0nMC42JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjI5Jy8+PGNpcmNsZSBjeD0nMzk2JyBjeT0nNjczJyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMjInLz48Y2lyY2xlIGN4PSc2NDcnIGN5PSc3NjUnIHI9JzAuNycgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC40MicvPjxjaXJjbGUgY3g9JzQ5NicgY3k9JzIxMCcgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjE5Jy8+PGNpcmNsZSBjeD0nMTE4MicgY3k9JzE4MScgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQwJy8+PGNpcmNsZSBjeD0nMTI5MScgY3k9JzYwNScgcj0nMC41JyBmaWxsPScjZmZlMmJhJyBvcGFjaXR5PScwLjUwJy8+PGNpcmNsZSBjeD0nMTI1MCcgY3k9JzgwMicgcj0nMS4yJyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjcyJy8+PGNpcmNsZSBjeD0nMTMxNScgY3k9JzU3MCcgcj0nMC42JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjQ5Jy8+PGNpcmNsZSBjeD0nMTEyNycgY3k9JzI1OCcgcj0nMC41JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjY0Jy8+PGNpcmNsZSBjeD0nMTE0MCcgY3k9JzQwNicgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjczJy8+PGNpcmNsZSBjeD0nMTA3NCcgY3k9Jzc2NScgcj0nMC44JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjMxJy8+PGNpcmNsZSBjeD0nMTExNicgY3k9JzMwMicgcj0nMC41JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjE5Jy8+PGNpcmNsZSBjeD0nODk0JyBjeT0nNjI0JyByPScwLjYnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMzUnLz48Y2lyY2xlIGN4PSc0MTgnIGN5PScyMTYnIHI9JzAuOCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41MycvPjxjaXJjbGUgY3g9JzU0NScgY3k9JzEwMDAnIHI9JzEuMicgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4zMScvPjxjaXJjbGUgY3g9JzU1NCcgY3k9JzU3NScgcj0nMC41JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjU2Jy8+PGNpcmNsZSBjeD0nMzU5JyBjeT0nNDAyJyByPScwLjUnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNjUnLz48Y2lyY2xlIGN4PScxNScgY3k9JzI1OScgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjc0Jy8+PGNpcmNsZSBjeD0nNzExJyBjeT0nOTY3JyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNzAnLz48Y2lyY2xlIGN4PSc2MjInIGN5PSc2NDUnIHI9JzEuMCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC41NScvPjxjaXJjbGUgY3g9JzYzJyBjeT0nOTMwJyByPScwLjYnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuNDInLz48Y2lyY2xlIGN4PScxMTk4JyBjeT0nNTQyJyByPScxLjAnIGZpbGw9JyNjZmUyZmYnIG9wYWNpdHk9JzAuMjInLz48Y2lyY2xlIGN4PSc1ODknIGN5PSc1MjcnIHI9JzEuMCcgZmlsbD0nI2NmZTJmZicgb3BhY2l0eT0nMC4zNycvPjxjaXJjbGUgY3g9JzY3NycgY3k9JzI3MCcgcj0nMC43JyBmaWxsPScjY2ZlMmZmJyBvcGFjaXR5PScwLjU5Jy8+PC9zdmc+");
-  background-size:1400px 1000px;
-}
-::selection{background:rgba(86,160,255,.35);color:#fff}
-a{color:var(--accent-2);text-decoration:none}
-a:hover{text-decoration:underline;text-underline-offset:3px}
-h1,h2,h3{line-height:1.12;letter-spacing:-.02em;margin:0}
-p{margin:0}
-img{max-width:100%;display:block}
-code{font-family:var(--mono);font-size:.9em}
-:focus-visible{outline:2px solid var(--accent-2);outline-offset:3px;border-radius:4px}
-.skip{position:absolute;left:-9999px;top:8px;z-index:99;background:#18253e;color:#fff;padding:10px 14px;border-radius:8px}
-.skip:focus{left:8px}
-
-/* ---------------------------------------------------------------- layout */
-.wrap{width:min(1180px,calc(100% - 40px));margin-inline:auto}
-main,header,footer{position:relative;z-index:1}
-.section{padding:76px 0;scroll-margin-top:86px}
-.section + .section{padding-top:12px}
-.section-head{max-width:720px;margin-bottom:30px}
-.eyebrow{
-  display:inline-flex;align-items:center;gap:8px;margin:0 0 14px;
-  font-size:.78rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
-}
-.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px rgba(104,214,168,.8)}
-.section h2{font-size:clamp(1.7rem,3.2vw,2.4rem);font-weight:650}
-.section-head p{margin-top:12px;color:var(--muted);font-size:1.02rem}
-
-/* ---------------------------------------------------------------- topbar */
-.topbar{position:sticky;top:0;z-index:30;backdrop-filter:blur(16px) saturate(1.2);background:rgba(9,14,26,.78);border-bottom:1px solid var(--line)}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:66px}
-.brand{display:flex;align-items:center;gap:11px;color:var(--text);font-weight:650;letter-spacing:-.01em}
-.brand:hover{text-decoration:none}
-.brand-planet{position:relative;width:26px;height:26px;border-radius:50%;flex:none;background:radial-gradient(circle at 32% 30%,#bde0ff 0%,#6aa8ff 36%,#2b5fae 68%,#14284a 100%);box-shadow:0 0 18px rgba(86,160,255,.45)}
-.brand-planet::after{content:"";position:absolute;inset:9px -5px;border:1.5px solid rgba(190,220,255,.72);border-radius:50%;transform:rotate(-18deg)}
-.brand-text b{color:var(--accent-2);font-weight:650}
-.nav{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
-.nav a{color:var(--muted);font-size:.91rem;font-weight:550;padding:8px 11px;border-radius:8px;display:inline-flex;align-items:center;gap:7px}
-.nav a:hover{color:var(--text);background:rgba(255,255,255,.05);text-decoration:none}
-.nav .nav-dl{color:var(--text);background:linear-gradient(180deg,rgba(46,66,102,.9),rgba(27,41,66,.9));border:1px solid var(--line-2);padding:7px 14px}
-.nav .nav-dl:hover{background:linear-gradient(180deg,rgba(62,88,132,.95),rgba(36,54,86,.95))}
-.nav svg{width:15px;height:15px}
-.nav button.nav-sound{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid transparent;
-  border-radius:8px;background:transparent;color:var(--muted);font:inherit;font-size:.91rem;font-weight:550;
-  line-height:1;cursor:pointer;transition:color .15s,background .15s,border-color .15s}
-.nav button.nav-sound:hover{color:var(--text);background:rgba(255,255,255,.05)}
-.nav button.nav-sound:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.nav button.nav-sound[aria-pressed="true"]{color:var(--accent-2);border-color:var(--line-2);background:rgba(86,160,255,.1)}
-.nav-sound[hidden]{display:none}
-.nav-sound svg{width:15px;height:15px;flex:none}
-.nav-sound .spk-on{display:none}
-.nav-sound[aria-pressed="true"] .spk-off{display:none}
-.nav-sound[aria-pressed="true"] .spk-on{display:inline}
-.nav-sound .bars{display:none;align-items:flex-end;gap:2px;height:12px;margin-left:1px}
-.nav-sound[aria-pressed="true"] .bars{display:inline-flex}
-.nav-sound .bars i{width:2px;height:4px;border-radius:1px;background:currentColor;animation:eq 1.7s ease-in-out infinite}
-.nav-sound .bars i:nth-child(2){animation-delay:.28s}
-.nav-sound .bars i:nth-child(3){animation-delay:.56s}
-@keyframes eq{0%,100%{height:3px}50%{height:11px}}
-@media (prefers-reduced-motion:reduce){.nav-sound .bars i{animation:none;height:6px}}
-
-/* ---------------------------------------------------------------- hero */
-.hero{position:relative;padding:72px 0 40px;overflow:hidden}
-.hero::before{
-  content:"";position:absolute;inset:-140px -20% auto -20%;height:820px;pointer-events:none;
-  background:
-    radial-gradient(620px 420px at 22% 34%, rgba(78,48,130,.32), transparent 70%),
-    radial-gradient(760px 520px at 82% 22%, rgba(38,86,164,.28), transparent 70%);
-}
-.hero-grid{position:relative;display:grid;grid-template-columns:1.02fr .98fr;gap:52px;align-items:center}
-.hero h1{font-size:clamp(2.5rem,5.1vw,4.15rem);font-weight:680;letter-spacing:-.035em}
-.hero h1 .line2{display:block;background:linear-gradient(92deg,#8cc4ff 0%,#b294ff 52%,#68d6a8 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-.lede{margin-top:20px;color:var(--muted);font-size:1.09rem;max-width:54ch}
-.cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
-.btn{
-  display:inline-flex;align-items:center;gap:10px;padding:12px 18px;border-radius:10px;
-  border:1px solid var(--line-2);color:var(--text);font-weight:650;font-size:.97rem;
-  background:linear-gradient(180deg,rgba(46,66,102,.95),rgba(27,41,66,.95));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 10px 24px rgba(0,0,0,.28);
-  transition:transform .16s ease,box-shadow .16s ease,background .16s ease,border-color .16s ease;
-}
-.btn:hover{text-decoration:none;transform:translateY(-1px);border-color:rgba(170,214,255,.5);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 14px 30px rgba(0,0,0,.32)}
-.btn:active{transform:translateY(0)}
-.btn svg{width:18px;height:18px;flex:none}
-.btn .sub{font-weight:500;font-size:.82em;color:rgba(232,240,255,.72)}
-.btn.primary{
-  background:linear-gradient(180deg,#6cb2ff 0%,#3d86e8 48%,#2256a4 100%);
-  border-color:rgba(170,214,255,.6);color:#fff;
-  box-shadow:0 14px 34px rgba(38,110,220,.38),inset 0 1px 0 rgba(255,255,255,.35);
-}
-.btn.primary:hover{box-shadow:0 18px 40px rgba(38,110,220,.46),inset 0 1px 0 rgba(255,255,255,.4)}
-.btn.primary .sub{color:rgba(255,255,255,.85)}
-.meta{display:flex;flex-wrap:wrap;gap:8px 18px;list-style:none;margin:22px 0 0;padding:0;color:var(--faint);font-size:.86rem}
-.meta li{display:flex;align-items:center;gap:7px}
-.meta li::before{content:"";width:4px;height:4px;border-radius:50%;background:rgba(140,196,255,.6)}
-.hero-figure{position:relative;margin:0;isolation:isolate}
-.hero-figure::before{
-  content:"";position:absolute;inset:12% 6% -8% 6%;z-index:-1;border-radius:50%;
-  background:radial-gradient(closest-side,rgba(86,160,255,.34),transparent 72%);filter:blur(24px);
-}
-.frame{
-  border-radius:14px;padding:7px;border:1px solid var(--line-2);
-  background:linear-gradient(180deg,rgba(46,66,102,.55),rgba(12,20,36,.75));
-  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.14);
-}
-.frame img{border-radius:9px;width:100%;height:auto;border:1px solid rgba(0,0,0,.35)}
-.hero-figure figcaption{margin-top:12px;color:var(--faint);font-size:.82rem;display:flex;justify-content:space-between;gap:12px}
-.hero-figure figcaption b{color:var(--muted);font-weight:600}
-
-/* ---------------------------------------------------------------- stats */
-.stats{margin-top:44px}
-.stats-inner{
-  display:grid;grid-template-columns:repeat(5,1fr);gap:2px;overflow:hidden;
-  border:1px solid var(--line);border-radius:var(--radius);
-  background:linear-gradient(180deg,rgba(24,37,62,.66),rgba(15,24,41,.8));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
-}
-.stat{padding:20px 18px;text-align:center;border-left:1px solid var(--line)}
-.stat:first-child{border-left:0}
-.stat b{display:block;font-size:1.65rem;font-weight:680;letter-spacing:-.02em;background:linear-gradient(180deg,#eaf2ff,#9cc6ff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.stat span{display:block;margin-top:2px;color:var(--faint);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}
-
-/* ---------------------------------------------------------------- cards */
-.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
-.card{
-  position:relative;padding:24px 22px 22px;border-radius:var(--radius);overflow:hidden;
-  border:1px solid var(--line);background:linear-gradient(180deg,rgba(24,37,62,.74),rgba(15,24,41,.86));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 30px rgba(0,0,0,.18);
-  transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;
-}
-.card::before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(140,196,255,.35),transparent);opacity:.7}
-.card:hover{transform:translateY(-3px);border-color:rgba(132,178,255,.32);box-shadow:inset 0 1px 0 rgba(255,255,255,.1),0 20px 40px rgba(0,0,0,.28)}
-.card .ico{
-  width:38px;height:38px;border-radius:10px;display:grid;place-items:center;margin-bottom:16px;
-  color:var(--accent-2);border:1px solid rgba(132,178,255,.22);
-  background:linear-gradient(180deg,rgba(86,160,255,.18),rgba(34,86,164,.12));
-}
-.card .ico svg{width:20px;height:20px}
-.card h3{font-size:1.05rem;font-weight:650;margin-bottom:7px}
-.card p{color:var(--muted);font-size:.93rem}
-
-/* ---------------------------------------------------------------- gallery */
-.gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
-.tile{margin:0;border-radius:var(--radius);border:1px solid var(--line);background:linear-gradient(180deg,rgba(24,37,62,.6),rgba(15,24,41,.8));padding:10px 10px 0;box-shadow:0 16px 34px rgba(0,0,0,.2)}
-.tile img{width:100%;height:auto;border-radius:9px;border:1px solid rgba(0,0,0,.35)}
-.tile figcaption{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:12px 8px 14px}
-.tile figcaption b{font-weight:600;font-size:.93rem}
-.tile figcaption span{color:var(--faint);font-size:.82rem;text-align:right}
-
-/* ---------------------------------------------------------------- requirements */
-.split{display:grid;grid-template-columns:1.05fr .95fr;gap:26px;align-items:start}
-.panel{
-  border-radius:var(--radius);border:1px solid var(--line);padding:28px;
-  background:linear-gradient(180deg,rgba(24,37,62,.74),rgba(15,24,41,.86));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 16px 36px rgba(0,0,0,.2);
-}
-.checks{list-style:none;margin:20px 0 0;padding:0;display:grid;gap:13px}
-.checks li{display:flex;gap:12px;color:var(--muted);font-size:.96rem}
-.checks b{color:var(--text);font-weight:600}
-.checks .tick{flex:none;width:20px;height:20px;border-radius:50%;margin-top:2px;display:grid;place-items:center;background:rgba(104,214,168,.14);border:1px solid rgba(104,214,168,.34);color:var(--green)}
-.checks .tick svg{width:11px;height:11px}
-.subtle{color:var(--faint);font-size:.85rem;margin-top:18px}
-.spec{width:100%;border-collapse:collapse;margin-top:18px;font-size:.9rem}
-.spec th,.spec td{text-align:left;padding:10px 0;border-top:1px solid var(--line);vertical-align:top}
-.spec th{color:var(--faint);font-weight:550;width:44%}
-.spec td{color:var(--text)}
-.tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;font-size:.76rem;font-weight:600;border:1px solid rgba(104,214,168,.3);background:rgba(104,214,168,.1);color:var(--green)}
-.tag.amber{border-color:rgba(255,196,110,.3);background:rgba(255,196,110,.1);color:var(--amber)}
-.tag.blue{border-color:rgba(86,160,255,.3);background:rgba(86,160,255,.1);color:var(--accent-2)}
-
-/* ---------------------------------------------------------------- download */
-.download-panel{
-  position:relative;overflow:hidden;border-radius:22px;border:1px solid rgba(132,178,255,.28);
-  padding:38px;display:grid;grid-template-columns:1.05fr .95fr;gap:38px;
-  background:
-    radial-gradient(700px 420px at 88% 0%, rgba(86,160,255,.18), transparent 68%),
-    linear-gradient(180deg,rgba(28,44,74,.9),rgba(13,21,38,.94));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),var(--shadow);
-}
-.download-panel::before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,transparent,rgba(170,214,255,.6),transparent)}
-.download h2{font-size:clamp(1.6rem,2.8vw,2.2rem)}
-.download p.lede{margin-top:12px;font-size:.98rem}
-.dl-file{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;margin-top:14px;color:var(--faint);font-size:.84rem}
-.dl-file code{color:var(--muted)}
-details{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
-summary{cursor:pointer;color:var(--muted);font-size:.86rem}
-summary:hover{color:var(--text)}
-details code{display:block;margin-top:10px;padding:11px 12px;border-radius:8px;background:rgba(0,0,0,.28);border:1px solid var(--line);color:var(--muted);font-size:.78rem;overflow-wrap:anywhere}
-.steps{list-style:none;margin:0;padding:0;display:grid;gap:16px}
-.steps li{display:flex;gap:14px;align-items:flex-start}
-.steps .n{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:700;color:#fff;background:linear-gradient(180deg,#56a0ff,#2256a4);border:1px solid rgba(170,214,255,.4);box-shadow:0 4px 12px rgba(38,110,220,.3)}
-.steps div b{display:block;font-size:.94rem;font-weight:600;color:var(--text)}
-.steps div span{display:block;color:var(--faint);font-size:.86rem;margin-top:1px}
-.note{margin-top:18px;padding:12px 14px;border-radius:10px;border:1px solid rgba(255,196,110,.22);background:rgba(255,196,110,.06);color:var(--muted);font-size:.84rem}
-.note b{color:var(--amber);font-weight:600}
-
-/* ---------------------------------------------------------------- footer */
-footer{border-top:1px solid var(--line);margin-top:72px;padding:34px 0 44px;color:var(--faint);font-size:.86rem}
-.foot{display:flex;flex-wrap:wrap;gap:18px 32px;align-items:flex-start;justify-content:space-between}
-.foot p{max-width:56ch}
-.foot b{color:var(--muted);font-weight:600}
-.foot nav{display:flex;flex-wrap:wrap;gap:6px 18px}
-.foot a{color:var(--muted)}
-.fine{margin-top:16px;font-size:.78rem;color:#5d6f8a;max-width:80ch}
-
-/* ---------------------------------------------------------------- responsive */
-@media (max-width:1040px){
-  .nav-sound .lbl{display:none}
-  .nav-sound{padding:8px}
-  .hero-grid{grid-template-columns:1fr;gap:38px}
-  .hero{padding-top:52px}
-  .hero-figure{max-width:760px}
-  .cards{grid-template-columns:repeat(2,1fr)}
-  .split{grid-template-columns:1fr}
-  .download-panel{grid-template-columns:1fr;padding:30px}
-}
-@media (max-width:720px){
-  .wrap{width:calc(100% - 28px)}
-  .section{padding:56px 0}
-  .bar{min-height:60px}
-  .nav a:not(.nav-dl):not(.nav-gh){display:none}
-  .nav-gh span{display:none}
-  .nav-sound .lbl{display:none}
-  .nav-sound{padding:8px}
-  .stats-inner{grid-template-columns:repeat(2,1fr)}
-  .stat:nth-child(odd){border-left:0}
-  .stat:nth-child(n+3){border-top:1px solid var(--line)}
-  .cards{grid-template-columns:1fr}
-  .gallery{grid-template-columns:1fr}
-  .tile figcaption{flex-direction:column;gap:3px}
-  .tile figcaption span{text-align:left}
-  .hero-figure figcaption{flex-direction:column;gap:4px}
-  .download-panel{padding:24px}
-  .meta{gap:6px 14px}
-}
-@media (max-width:480px){
-  .cta .btn{width:100%;justify-content:center}
-  .brand-text{font-size:.95rem}
-  .nav .nav-dl{padding:7px 10px;font-size:.85rem}
-}
-@media (prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  *,*::before,*::after{transition:none!important;animation:none!important}
-}
-</style>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Solar System Sandbox","softwareVersion":"1.0.0","operatingSystem":"Windows 7 SP1 or later","applicationCategory":"EducationalApplication","description":"A real-time solar system simulator and N-body gravity sandbox for Windows 7.","downloadUrl":"https://testid001772.github.io/solar-system-sandbox-simulator/dist/SolarSystemSandbox-1.0.0-Setup.exe","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/licenses/MIT"}
-</script>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<a class="skip" href="#main">Skip to content</a>
+<div id="app">
 
-<header class="topbar">
-  <div class="wrap bar">
-    <a class="brand" href="#top" aria-label="Solar System Sandbox — back to top">
-      <span class="brand-planet" aria-hidden="true"></span>
-      <span class="brand-text">Solar System <b>Sandbox</b></span>
-    </a>
-    <nav class="nav" aria-label="Primary">
-      <a href="#features">Features</a>
-      <a href="#screens">Screenshots</a>
-      <a href="#requirements">Requirements</a>
-      <a href="#download">Download</a>
-      <button class="nav-sound" id="sound" type="button" aria-pressed="false"
-              aria-label="Ambient soundtrack: off" title="Ambient soundtrack, synthesised in your browser" hidden>
-        <svg class="spk-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m17 9 4 6"/><path d="m21 9-4 6"/></svg>
-        <svg class="spk-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-        <span class="lbl">Sound</span>
-        <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>
-      </button>
-      <a class="nav-gh" href="https://github.com/testID001772/solar-system-sandbox-simulator">
-        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
-        <span>GitHub</span>
-      </a>
-      <a class="nav-dl" href="dist/SolarSystemSandbox-1.0.0-Setup.exe" download>Download</a>
-    </nav>
-  </div>
-</header>
-
-<main id="main">
-  <section class="hero" id="top">
-    <div class="wrap">
-      <div class="hero-grid">
-        <div>
-          <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Windows 7 SP1 · 32-bit · no runtime</p>
-          <h1>The solar system.<span class="line2">Your sandbox.</span></h1>
-          <p class="lede">Forty worlds on JPL's approximate ephemerides, a velocity-Verlet gravity engine and drop-in content folders — wrapped in a hand-drawn Aero interface that ships as a single 320 KB native app.</p>
-          <div class="cta">
-            <a class="btn primary" href="dist/SolarSystemSandbox-1.0.0-Setup.exe" download>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-              Download for Windows <span class="sub">2.2 MB</span>
-            </a>
-            <a class="btn" href="#screens">See it in action</a>
-          </div>
-          <ul class="meta">
-            <li>Windows 7 SP1 or later</li>
-            <li>1 GB RAM / 1 CPU friendly</li>
-            <li>MIT licensed</li>
-            <li>No runtime required</li>
-          </ul>
-        </div>
-        <figure class="hero-figure">
-          <div class="frame">
-            <img src="docs/screenshots/overview.png" width="1280" height="800" alt="The Solar System Sandbox window: Aero Night theme, the full solar system, the inspector showing Earth and the transport bar with EPOCH and scenario controls." fetchpriority="high" decoding="async">
-          </div>
-          <figcaption><span><b>Aero Night</b> · full ephemeris</span><span>1280 × 800 · GDI+</span></figcaption>
-        </figure>
-      </div>
-
-      <div class="stats" aria-label="At a glance">
-        <div class="stats-inner">
-          <div class="stat"><b>40</b><span>bodies</span></div>
-          <div class="stat"><b>6</b><span>scenarios</span></div>
-          <div class="stat"><b>5</b><span>themes</span></div>
-          <div class="stat"><b>6</b><span>content folders</span></div>
-          <div class="stat"><b>0</b><span>runtime deps</span></div>
-        </div>
-      </div>
+  <header id="topbar">
+    <div class="brand">
+      <strong>Solar System Sandbox</strong>
+      <small>Simulator</small>
     </div>
-  </section>
 
-  <section class="section" id="features">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>What it does</p>
-        <h2>A real simulator that is happy to be broken.</h2>
-        <p>Start with the actual sky. Pause time, jump to a date, or cut a planet loose and let Newton take over. Everything below runs in one 32-bit process with no runtime to install.</p>
+    <div class="group">
+      <button id="btn-play" class="icon" title="Play / pause (Space)">❚❚</button>
+      <div>
+        <label for="speed">Speed</label>
+        <input type="range" id="speed" min="0" max="1000" value="600">
       </div>
-      <div class="cards">
-        <article class="card">
-          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><ellipse cx="12" cy="12" rx="10" ry="4.4" transform="rotate(-18 12 12)"/><circle cx="20" cy="8.4" r="1"/></svg></div>
-          <h3>Real starting positions</h3>
-          <p>Sun, eight planets, Pluto, Ceres, the major moons, comets and the asteroid belt, placed from JPL's approximate elements for 1800–2050. The clock starts today.</p>
-        </article>
-        <article class="card">
-          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="14" r="3"/><path d="M4.6 12.8c-2.4-1.4 1.1-7 4.3-8.6M19.4 12.8c2.4-1.4-1.1-7-4.3-8.6M3 19.5c2.6 1.9 5.6 2.9 9 2.9s6.4-1 9-2.9"/></svg></div>
-          <h3>Gravity on demand</h3>
-          <p>Release a body from its rail and the scene switches to a velocity-Verlet N-body integrator. Collisions merge worlds, trails show the damage, and <code>N</code> toggles it all.</p>
-        </article>
-        <article class="card">
-          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-.8 2-1.8 0-1.6-1.9-1.5-1.9-3 0-1.2 1-2.2 2.5-2.2H17a4 4 0 0 0 4-4C21 6 17 3 12 3Z"/><circle cx="8" cy="9" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7" r="1.1" fill="currentColor" stroke="none"/><circle cx="16" cy="9" r="1.1" fill="currentColor" stroke="none"/></svg></div>
-          <h3>Five complete themes</h3>
-          <p>Aero Night, Aero Day, Luna Blue, Aurora and High Contrast recolour the shell, the scene and the installer. <code>F3</code> cycles them; the choice is saved with your simulations.</p>
-        </article>
-        <article class="card">
-          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><path d="M3 10.5h18"/></svg></div>
-          <h3>Moddable by folders</h3>
-          <p>Drop <code>.part</code> templates, <code>pack.ini</code> recolours and <code>.sims</code> scenarios into Parts, Texture Pack and Mods. The Library tab (<code>F4</code>) picks them up without a compiler.</p>
-        </article>
-        <article class="card">
-          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10M4 12h4M12 12h8"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/><circle cx="10" cy="12" r="2"/></svg></div>
-          <h3>Gravitator-style controls</h3>
-          <p><code>C</code> opens start-date spinners, orbit/label switches, fade, axes, simplified discs, a body-tracking picker and a live A/B separation readout.</p>
-        </article>
-        <article class="card">
-          <div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M9 20h6M12 16v4"/></svg></div>
-          <h3>Built for old hardware</h3>
-          <p>No CRT, no .NET, no GPU — just GDI+ and the DLLs that ship with Windows 7. On one core or under 1.5 GB RAM it switches to a lighter scene and a 30 fps timer.</p>
-        </article>
-      </div>
+      <output id="speed-out">1.00 day/s</output>
     </div>
-  </section>
 
-  <section class="section" id="screens">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Screenshots</p>
-        <h2>Drawn by the app, frame by frame.</h2>
-        <p>Every pixel is vector geometry through GDI+ — the starfield, the rings, the labels and the glass. These frames come straight from the headless render harness.</p>
-      </div>
-      <div class="gallery">
-        <figure class="tile">
-          <img src="docs/screenshots/saturn.png" width="1280" height="800" alt="Saturn filling the viewport with its rings and moons, labelled against a starfield." loading="lazy" decoding="async">
-          <figcaption><b>Saturn, up close</b><span>rings from the camera's shoulder</span></figcaption>
-        </figure>
-        <figure class="tile">
-          <img src="docs/screenshots/themes.png" width="1280" height="800" alt="The theme picker open over the scene, previewing Aero Night, Aero Day, Luna Blue, Aurora and High Contrast." loading="lazy" decoding="async">
-          <figcaption><b>Five themes, one table</b><span>shell, scene and installer</span></figcaption>
-        </figure>
-        <figure class="tile">
-          <img src="docs/screenshots/simulation.png" width="1280" height="800" alt="The simulation controls panel: start date 2029-11-29, view switches, auto track on Saturn and an object-separation readout." loading="lazy" decoding="async">
-          <figcaption><b>Simulation controls</b><span>start date · view switches · separation</span></figcaption>
-        </figure>
-        <figure class="tile">
-          <img src="docs/screenshots/tracking.png" width="1280" height="800" alt="The auto-track picker open, listing the Sun, planets, Pluto and Ceres with Saturn highlighted." loading="lazy" decoding="async">
-          <figcaption><b>Auto track</b><span>pick a body, the camera follows</span></figcaption>
-        </figure>
-        <figure class="tile">
-          <img src="docs/screenshots/library.png" width="1280" height="800" alt="The Library tab listing parts, texture packs and mods found in the content folders." loading="lazy" decoding="async">
-          <figcaption><b>Content library</b><span>parts · texture packs · mods</span></figcaption>
-        </figure>
-        <figure class="tile">
-          <img src="docs/screenshots/create-body.png" width="1280" height="800" alt="The create-body panel with kind chips, mass, radius and orbit sliders." loading="lazy" decoding="async">
-          <figcaption><b>Build a world</b><span>kind, mass, radius, orbit</span></figcaption>
-        </figure>
-      </div>
+    <div class="group">
+      <label>Epoch (UTC)</label>
+      <span id="epoch">—</span>
+      <button id="btn-now" title="Jump to the current date">NOW</button>
     </div>
-  </section>
 
-  <section class="section" id="requirements">
-    <div class="wrap">
-      <div class="section-head">
-        <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Compatibility</p>
-        <h2>Runs on the machine you already have.</h2>
-        <p>Windows 7 is the target, not an afterthought. The same 32-bit executable runs on later Windows versions too.</p>
-      </div>
-      <div class="split">
-        <div class="panel">
-          <ul class="checks">
-            <li><span class="tick" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3.2L13 5"/></svg></span><span><b>Windows 7 SP1 or later</b> — 32-bit and 64-bit. The app is a 32-bit PE and runs under WOW64 on x64 systems.</span></li>
-            <li><span class="tick" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3.2L13 5"/></svg></span><span><b>1 GB RAM and one core is enough.</b> The 32-bit process is single-threaded, with a ~4 MB frame buffer at 1280×800; the renderer peaks near 10 MB.</span></li>
-            <li><span class="tick" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3.2L13 5"/></svg></span><span><b>900 × 600 minimum, 1280 × 800 recommended.</b> The controls panel scrolls on short screens, so 1024×600 netbooks keep every switch.</span></li>
-            <li><span class="tick" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3.2L13 5"/></svg></span><span><b>No runtime and no GPU.</b> Only GDI+, user32, shell32, comdlg32, gdi32 and kernel32 — all present on a stock Windows 7 SP1.</span></li>
-            <li><span class="tick" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8.5 3.2 3.2L13 5"/></svg></span><span><b>Writable content lives in <code>%APPDATA%\Solar System Sandbox</code></b>, so logs, saves and mods keep working inside Program Files.</span></li>
-          </ul>
-          <p class="subtle">The installer is 32-bit and requests administrator rights; on 64-bit Windows it installs to <code>Program Files (x86)</code>.</p>
-        </div>
-        <aside class="panel">
-          <span class="tag">Automatic</span>
-          <h3 style="margin-top:14px;font-size:1.15rem">Low-power mode</h3>
-          <p style="margin-top:8px;color:var(--muted);font-size:.94rem">Start on one CPU or under 1.5 GB of RAM and the app drops to a lighter scene: 110 stars instead of 240, no nebula wash, smaller glows and a 30 fps timer. The simulation itself does not change.</p>
-          <table class="spec">
-            <tr><th>Application</th><td>320 KB, 32-bit PE, no CRT</td></tr>
-            <tr><th>Installer</th><td>2.2 MB, self-contained</td></tr>
-            <tr><th>Frame buffer</th><td>4 MB at 1280×800</td></tr>
-            <tr><th>Measured peak</th><td>~10 MB in the render harness</td></tr>
-            <tr><th>Threads</th><td>1</td></tr>
-            <tr><th>Licence</th><td>MIT</td></tr>
-          </table>
-        </aside>
-      </div>
+    <div class="group">
+      <label for="scenario">Scenario</label>
+      <select id="scenario"></select>
     </div>
-  </section>
 
-  <section class="section download" id="download">
-    <div class="wrap">
-      <div class="download-panel">
-        <div>
-          <p class="eyebrow"><span class="dot" aria-hidden="true"></span>Download</p>
-          <h2>One installer. Everything inside.</h2>
-          <p class="lede">The setup wizard carries the app, the licence, the README, the screenshots and the sample parts, packs and scenario. Pick a theme on the welcome page, install, launch.</p>
-          <div class="cta">
-            <a class="btn primary" href="dist/SolarSystemSandbox-1.0.0-Setup.exe" download>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-              SolarSystemSandbox-1.0.0-Setup.exe
-            </a>
-          </div>
-          <p class="dl-file"><span>Version <b style="color:var(--muted)">1.0.0</b></span><span>2,343,936 bytes</span><span>Windows 7 SP1+</span></p>
-          <details>
-            <summary>SHA-256 checksum</summary>
-            <code>e79bc7fb32b2dd0ad5a204d10f115c3e32c0392d948327a3b3a83fe0a67e80dd</code>
-          </details>
-        </div>
-        <div>
-          <ol class="steps">
-            <li><span class="n">1</span><div><b>Run the setup</b><span>Choose a theme, then install to Program Files (or Program Files (x86) on 64-bit Windows) — or any folder you like.</span></div></li>
-            <li><span class="n">2</span><div><b>Pick a scenario</b><span>Solar System, Inner System, Jupiter &amp; Saturn, Outer System, Binary Star or Empty Sandbox.</span></div></li>
-            <li><span class="n">3</span><div><b>Break something</b><span>Create a body, release a planet, toggle <code>N</code> for N-body gravity, save the result to <code>.sims</code>.</span></div></li>
-          </ol>
-          <p class="note"><b>Unsigned hobby build.</b> Windows may show “Unknown publisher” or a SmartScreen prompt. Choose <em>More info → Run anyway</em>; the source and every build is in the repository.</p>
-          <p class="subtle">Prefer a portable copy? Clone the repo and run <code>tools/build_windows.sh app</code> — <code>build/SolarSandbox.exe</code> runs from any folder.</p>
-        </div>
-      </div>
+    <div class="spacer"></div>
+
+    <div class="group">
+      <span id="gravity-chip" title="Release the planets from their ephemeris rails and let everything pull on everything">Gravity: rails</span>
+      <button id="btn-theme" class="icon" title="Cycle colour theme (T)">◐</button>
+      <span id="theme-label" class="theme-label">Aero Night</span>
+      <button id="btn-help" class="icon" title="Help">?</button>
     </div>
-  </section>
-</main>
+  </header>
 
-<footer>
-  <div class="wrap">
-    <div class="foot">
-      <p><b>Solar System Sandbox</b><br>Real ephemerides, a gravity sandbox and Windows 7 chrome. Built with C99, GDI+ and no runtime.</p>
-      <nav aria-label="Project links">
-        <a href="https://github.com/testID001772/solar-system-sandbox-simulator">GitHub repository</a>
-        <a href="https://github.com/testID001772/solar-system-sandbox-simulator/blob/HEAD/README.md">README</a>
-        <a href="https://github.com/testID001772/solar-system-sandbox-simulator/blob/HEAD/LICENSE">MIT licence</a>
-        <a href="https://github.com/testID001772/solar-system-sandbox-simulator/issues">Issues</a>
+  <div id="main">
+    <div id="stage">
+      <canvas id="view"></canvas>
+      <div id="hover-chip"><span id="hover-name"></span><span id="hover-info"></span></div>
+      <div id="toasts"></div>
+    </div>
+
+    <aside id="inspector">
+      <nav class="tabs">
+        <button id="tab-inspect" class="on">Inspect</button>
+        <button id="tab-create">Create</button>
+        <button id="tab-library">Library</button>
       </nav>
-    </div>
-    <p class="fine">Ephemerides: JPL approximate elements (Standish), valid 1800–2050. Not affiliated with NASA or JPL. Screenshots are produced by the app's software rasteriser; the ambient soundtrack is synthesised locally in your browser. Windows is a trademark of Microsoft Corporation.</p>
+
+      <section class="panel" id="panel-inspect">
+        <div id="insp-empty">
+          <span class="big">◍</span>
+          Click a body in the sky — or double-click to follow it.<br>
+          Nothing selected yet.
+        </div>
+        <div id="insp-body" style="display:none">
+          <div id="insp-head">
+            <span id="insp-dot"></span>
+            <h2 id="insp-name">—</h2>
+          </div>
+          <span id="insp-kind">—</span>
+
+          <div class="facts">
+            <div class="fact"><small>Distance from star</small><b id="insp-dist">—</b></div>
+            <div class="fact"><small>Orbital period</small><b id="insp-period">—</b></div>
+            <div class="fact"><small>Speed</small><b id="insp-speed">—</b></div>
+            <div class="fact"><small>Radius</small><b id="insp-radius">—</b></div>
+            <div class="fact"><small>Mass</small><b id="insp-mass">—</b></div>
+            <div class="fact"><small>Rotation</small><b id="insp-rot">—</b></div>
+          </div>
+
+          <div class="actions">
+            <button id="btn-focus">◎ Focus</button>
+            <button id="btn-follow">👁 Follow</button>
+            <button id="btn-release">⛓ Release to gravity</button>
+            <button id="btn-remove" class="danger">🗑 Remove</button>
+          </div>
+
+          <p id="insp-desc"></p>
+          <div id="insp-extra"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-create" style="display:none">
+        <div class="ctl">
+          <div class="row"><label>Body type</label></div>
+          <div id="type-grid"></div>
+        </div>
+
+        <div class="tworow">
+          <div class="field">
+            <label for="c-name">Name</label>
+            <input type="text" id="c-name" placeholder="auto" maxlength="24" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="c-color">Colour</label>
+            <input type="color" id="c-color" value="#5f9fe8">
+          </div>
+        </div>
+
+        <div class="ctl">
+          <div class="row"><label for="c-mass">Mass</label><output id="c-mass-out">1.00 Earth</output></div>
+          <input type="range" id="c-mass" min="-7" max="7" step="0.001" value="0">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="c-radius">Radius</label><output id="c-radius-out">6,371 km</output></div>
+          <input type="range" id="c-radius" min="1" max="6.5" step="0.001" value="3.8">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="c-dist">Orbit radius</label><output id="c-dist-out">1.50 AU</output></div>
+          <input type="range" id="c-dist" min="-1.3" max="2" step="0.001" value="0.176">
+        </div>
+
+        <div class="tworow">
+          <div class="field">
+            <label for="c-dir">Direction</label>
+            <select id="c-dir">
+              <option value="pro">Prograde</option>
+              <option value="retro">Retrograde</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="c-vel">Launch speed</label>
+            <select id="c-vel">
+              <option value="0.6">0.6 × circular</option>
+              <option value="0.85">0.85 ×</option>
+              <option value="1" selected>Circular</option>
+              <option value="1.2">1.2 ×</option>
+              <option value="1.414">Escape</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="c-ring"> Give it rings</label>
+        </div>
+
+        <button id="btn-add" class="primary">＋ Add to sandbox</button>
+        <p class="hint">The new body is integrated live under gravity while the planets stay on their rails.</p>
+
+        <div class="ctl">
+          <div class="row"><label>Templates</label></div>
+          <div id="parts-list"></div>
+        </div>
+
+        <button id="btn-place">✛ Place by drag</button>
+        <p class="hint">Drag in the sky: press to set the position, drag to aim the velocity, release to launch.</p>
+      </section>
+
+      <section class="panel" id="panel-library" style="display:none">
+        <span id="library-current">—</span>
+        <div id="preset-grid"></div>
+        <div class="lib-actions">
+          <button id="btn-export">⭳ Export scenario</button>
+          <button id="btn-import">⭱ Import…</button>
+        </div>
+        <input type="file" id="file-import" accept=".json,application/json" style="display:none">
+        <p class="lib-note">Scenarios are plain <code>.json</code> — share them like the desktop app's <code>.sims</code> files.</p>
+      </section>
+    </aside>
   </div>
-</footer>
-<script>
-/* Ambient soundtrack for the landing page.
-   A handful of slowly drifting sine voices through a small generated reverb,
-   plus a low wind bed. Nothing is fetched: the whole piece is synthesised
-   from oscillators the moment the speaker button is switched on. */
-(function () {
-  'use strict';
 
-  var btn = document.getElementById('sound');
-  if (!btn) return;
-  var AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return;
+  <footer id="statusbar">
+    <span id="status-count">0 bodies</span>
+    <span id="status-mode">ephemeris rails</span>
+    <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · C create · L library</span>
+    <span class="right"><span id="status-fps">60 fps</span><span id="status-size">—</span></span>
+  </footer>
 
-  var CHORDS = [
-    [110.00, 164.81, 220.00, 277.18, 329.63], /* A minor add9 */
-    [87.31, 130.81, 174.61, 220.00, 261.63],  /* F major      */
-    [98.00, 146.83, 196.00, 246.94, 293.66],  /* G major      */
-    [130.81, 196.00, 261.63, 329.63, 392.00]  /* C major      */
-  ];
-  var KEY = 'sss-sound';
-  var ctx = null;
-  var master = null;
-  var voices = [];
-  var timer = 0;
-  var chord = 0;
-  var running = false;
-  var wanted = false;
+</div>
 
-  function pref() {
-    try { return window.localStorage.getItem(KEY) === 'on'; } catch (e) { return false; }
-  }
-  function save(on) {
-    try { window.localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) {}
-  }
-  function reflect() {
-    btn.setAttribute('aria-pressed', running ? 'true' : 'false');
-    btn.setAttribute('aria-label', running ? 'Ambient soundtrack: on' : 'Ambient soundtrack: off');
-  }
+<div id="help">
+  <div class="card">
+    <h2>Controls</h2>
+    <table>
+      <tr><td>Space</td><td>play / pause the simulation</td></tr>
+      <tr><td>drag</td><td>pan the view</td></tr>
+      <tr><td>wheel, +/−</td><td>zoom toward the cursor</td></tr>
+      <tr><td>click</td><td>select a body</td></tr>
+      <tr><td>double-click</td><td>select and follow a body</td></tr>
+      <tr><td>F</td><td>focus the selected body</td></tr>
+      <tr><td>T / F3</td><td>cycle the colour theme</td></tr>
+      <tr><td>C / L</td><td>open the Create / Library tab</td></tr>
+      <tr><td>Delete</td><td>remove the selected body</td></tr>
+      <tr><td>Gravity chip</td><td>release every planet into live N-body gravity</td></tr>
+    </table>
+    <div class="foot"><button id="help-close" class="primary">Close</button></div>
+  </div>
+</div>
 
-  function noiseBuffer(seconds) {
-    var rate = ctx.sampleRate;
-    var len = Math.floor(rate * seconds);
-    var buf = ctx.createBuffer(1, len, rate);
-    var data = buf.getChannelData(0);
-    for (var i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
-    return buf;
-  }
-
-  function reverbBuffer(seconds, decay) {
-    var rate = ctx.sampleRate;
-    var len = Math.floor(rate * seconds);
-    var buf = ctx.createBuffer(2, len, rate);
-    for (var c = 0; c < 2; c++) {
-      var data = buf.getChannelData(c);
-      for (var i = 0; i < len; i++) {
-        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
-      }
-    }
-    return buf;
-  }
-
-  function build() {
-    ctx = new AC();
-    master = ctx.createGain();
-    master.gain.value = 0;
-    master.connect(ctx.destination);
-
-    var tone = ctx.createBiquadFilter();
-    tone.type = 'lowpass';
-    tone.frequency.value = 780;
-    tone.Q.value = 0.4;
-
-    var dry = ctx.createGain();
-    dry.gain.value = 0.9;
-    tone.connect(dry);
-    dry.connect(master);
-
-    var reverb = ctx.createConvolver();
-    reverb.buffer = reverbBuffer(3.4, 2.6);
-    var wetTone = ctx.createBiquadFilter();
-    wetTone.type = 'lowpass';
-    wetTone.frequency.value = 1600;
-    var wet = ctx.createGain();
-    wet.gain.value = 0.42;
-    tone.connect(reverb);
-    reverb.connect(wetTone);
-    wetTone.connect(wet);
-    wet.connect(master);
-
-    voices = [];
-    var notes = CHORDS[chord];
-    for (var i = 0; i < notes.length; i++) {
-      var osc = ctx.createOscillator();
-      osc.type = i === 0 ? 'triangle' : 'sine';
-      osc.frequency.value = notes[i];
-      osc.detune.value = (i % 2 ? 5 : -4) + i * 1.5;
-
-      var gain = ctx.createGain();
-      gain.gain.value = i === 0 ? 0.05 : 0.042;
-
-      var lfo = ctx.createOscillator();
-      lfo.frequency.value = 0.032 + i * 0.009;
-      var depth = ctx.createGain();
-      depth.gain.value = 0.016;
-      lfo.connect(depth);
-      depth.connect(gain.gain);
-
-      osc.connect(gain);
-      if (ctx.createStereoPanner) {
-        var pan = ctx.createStereoPanner();
-        pan.pan.value = (i - 2) * 0.17;
-        gain.connect(pan);
-        pan.connect(tone);
-      } else {
-        gain.connect(tone);
-      }
-      osc.start();
-      lfo.start();
-      voices.push(osc);
-    }
-
-    var wind = ctx.createBufferSource();
-    wind.buffer = noiseBuffer(5);
-    wind.loop = true;
-    var windFilter = ctx.createBiquadFilter();
-    windFilter.type = 'lowpass';
-    windFilter.frequency.value = 320;
-    windFilter.Q.value = 0.7;
-    var windGain = ctx.createGain();
-    windGain.gain.value = 0.05;
-    wind.connect(windFilter);
-    windFilter.connect(windGain);
-    windGain.connect(master);
-    wind.start();
-  }
-
-  function fadeTo(value, seconds) {
-    if (!ctx || !master) return;
-    var t = ctx.currentTime;
-    master.gain.cancelScheduledValues(t);
-    master.gain.setValueAtTime(master.gain.value, t);
-    master.gain.linearRampToValueAtTime(value, t + seconds);
-  }
-
-  function nextChord() {
-    if (!running || !ctx || !voices.length) return;
-    var step = 1 + Math.floor(Math.random() * (CHORDS.length - 1));
-    chord = (chord + step) % CHORDS.length;
-    var notes = CHORDS[chord];
-    var t = ctx.currentTime;
-    for (var i = 0; i < voices.length && i < notes.length; i++) {
-      voices[i].frequency.setTargetAtTime(notes[i], t, 4);
-    }
-  }
-
-  function start() {
-    if (running) return true;
-    try {
-      if (!ctx) build();
-      if (ctx.state === 'suspended' && ctx.resume) ctx.resume();
-      fadeTo(0.55, 3.2);
-      running = true;
-      window.clearInterval(timer);
-      timer = window.setInterval(nextChord, 21000);
-    } catch (e) {
-      running = false;
-      return false;
-    }
-    reflect();
-    return true;
-  }
-
-  function stop() {
-    if (!running) return;
-    running = false;
-    window.clearInterval(timer);
-    timer = 0;
-    var dying = ctx;
-    var dyingMaster = master;
-    ctx = null;
-    master = null;
-    voices = [];
-    if (dying && dyingMaster) {
-      var t = dying.currentTime;
-      dyingMaster.gain.cancelScheduledValues(t);
-      dyingMaster.gain.setValueAtTime(dyingMaster.gain.value, t);
-      dyingMaster.gain.linearRampToValueAtTime(0, t + 0.8);
-      window.setTimeout(function () {
-        try { dying.close(); } catch (e) {}
-      }, 1100);
-    }
-    reflect();
-  }
-
-  btn.addEventListener('click', function () {
-    if (running) {
-      wanted = false;
-      save(false);
-      stop();
-    } else {
-      wanted = true;
-      if (start()) save(true);
-      else {
-        wanted = false;
-        reflect();
-      }
-    }
-  });
-
-  reflect();
-  btn.hidden = false;
-
-  /* Remembered preference: browsers only allow audio after a gesture, so wait
-     for the first click or key press anywhere outside the button itself. */
-  if (pref()) {
-    wanted = true;
-    var arm = function (ev) {
-      if (ev && ev.target && btn.contains(ev.target)) return;
-      document.removeEventListener('pointerdown', arm, true);
-      document.removeEventListener('keydown', arm, true);
-      if (wanted && !running) start();
-    };
-    document.addEventListener('pointerdown', arm, true);
-    document.addEventListener('keydown', arm, true);
-  }
-})();
-</script>
+<script src="js/data.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

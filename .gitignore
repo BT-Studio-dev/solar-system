@@ -1,19 +1,7 @@
-# Build outputs
-build/
-dist/*
-node_modules/
-__pycache__/
-*.pyc
-*.o
-*.obj
-*.res
-*.exe
-*.pdb
-*.ilk
+# OS cruft
+.DS_Store
+Thumbs.db
 
-# The installer is a deliverable: keep the single file in dist/.
-!dist/*.exe
-
-# Local tooling
-.venv/
+# local scratch
+*.log
 tmp/
