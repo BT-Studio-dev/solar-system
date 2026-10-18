@@ -1,0 +1,127 @@
+name: Build installer
+
+# Builds the Windows application and the self-contained setup executable
+# exactly as documented in the README: zig cc cross-compiles i686 PE images
+# on Linux (no Windows runner, no CRT, runs on Windows 7 SP1 and later).
+#
+# - every push / PR: unit tests + a full build, artifacts uploaded to the run
+# - push to main:    the installer is also committed into dist/ so the
+#                    README "Download the installer" raw link stays current
+# - tag v*:          the installer is attached to a GitHub release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-installer-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Simulation engine (ephemerides, Kepler, N-body, save/load)
+        run: |
+          gcc -std=c99 -O2 -Wall -Wextra -Wno-unused-parameter -Isrc \
+              tests/test_sim.c src/sim.c src/core.c -lm -o /tmp/test_sim && /tmp/test_sim
+
+      - name: Content folders (parts, packs, mods, logging)
+        run: |
+          gcc -std=c99 -O1 -Wall -Wextra -Isrc \
+              tests/test_content.c src/content.c src/core.c -o /tmp/test_content && /tmp/test_content
+
+      - name: Simulation panel UI
+        run: |
+          gcc -std=c99 -O1 -Wall -Wextra -Wno-unused-parameter -Isrc \
+              tests/test_ui.c src/ui.c src/scene.c src/app.c src/sim.c src/content.c src/theme.c \
+              src/core.c src/gfx_soft.c -lm -o /tmp/test_ui && /tmp/test_ui
+
+  installer:
+    name: Windows installer (zig cc, i686)
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - id: version
+        run: echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Install the zig toolchain (pinned, validated against tools/build_windows.sh)
+        run: python3 -m pip install ziglang==0.17.0
+
+      - name: Build the application and the installer
+        run: tools/build_windows.sh all
+
+      - name: Verify the PE images are i386
+        run: |
+          python3 - "${{ steps.version.outputs.version }}" <<'EOF'
+          import struct, sys
+          version = sys.argv[1]
+          for path in ("build/SolarSandbox.exe",
+                       "dist/SolarSystemSandbox-%s-Setup.exe" % version):
+              with open(path, "rb") as fh:
+                  head = fh.read(4096)
+              assert head[:2] == b"MZ", path + ": missing MZ header"
+              pe = struct.unpack_from("<I", head, 0x3C)[0]
+              assert head[pe:pe + 4] == b"PE\x00\x00", path + ": missing PE signature"
+              machine = struct.unpack_from("<H", head, pe + 4)[0]
+              assert machine == 0x014C, "%s: not an i386 image (0x%04x)" % (path, machine)
+              print(path + ": PE32 i386 OK")
+          EOF
+
+      - name: Payload round-trip test (CRC, byte-for-byte extraction)
+        run: |
+          gcc -std=c99 -O1 -Wall -Wextra -Isrc \
+              tests/test_payload.c src/installer/payload.c src/core.c -lm -o /tmp/test_payload
+          /tmp/test_payload build/payload.bin build/payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SolarSystemSandbox-${{ steps.version.outputs.version }}-windows
+          path: |
+            dist/*.exe
+            build/SolarSandbox.exe
+          if-no-files-found: error
+
+      - name: Publish the installer into dist/ (keeps the README download link current)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist
+          if git diff --cached --quiet; then
+            echo "Installer unchanged; nothing to publish."
+            exit 0
+          fi
+          git commit -m "ci: publish SolarSystemSandbox-$(tr -d '[:space:]' < VERSION)-Setup.exe [skip ci]"
+          git push
+
+      - name: Attach the installer to the release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          SETUP="dist/SolarSystemSandbox-$VERSION-Setup.exe"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --clobber "$SETUP"
+          else
+            gh release create "$GITHUB_REF_NAME" "$SETUP" \
+                --title "Solar System Sandbox $VERSION" --generate-notes
+          fi
