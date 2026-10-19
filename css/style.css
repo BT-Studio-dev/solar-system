@@ -130,6 +130,29 @@ select {
 
 .spacer { flex: 1; }
 .theme-label { font-size: 11px; color: var(--muted); min-width: 76px; }
+
+/* ------------------------------------------------------- volume popup */
+
+.vol-wrap { position: relative; }
+#vol-pop {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 30;
+  width: 236px; padding: 12px 14px;
+  background: var(--panel-solid); border: 1px solid var(--line-2);
+  border-radius: 12px; box-shadow: var(--shadow);
+  cursor: default;
+}
+#vol-pop[hidden] { display: none; }
+.vol-row { display: flex; align-items: center; gap: 9px; }
+.vol-row button { flex: none; }
+.vol-row input[type='range'] { flex: 1; width: auto; accent-color: var(--accent); }
+#vol-out { font: 600 11px Consolas, ui-monospace, monospace; color: var(--accent-2); min-width: 34px; text-align: right; }
+.vol-amb {
+  display: flex; align-items: center; gap: 7px; margin-top: 10px;
+  font-size: 12px; color: var(--muted); cursor: pointer;
+}
+.vol-amb input { accent-color: var(--accent); }
+#btn-mute.off { color: var(--danger); }
+
 #gravity-chip {
   font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--muted); border: 1px dashed var(--line-2);

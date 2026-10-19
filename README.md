@@ -12,6 +12,7 @@ Planets follow **JPL's approximate ephemerides** (J2000 Keplerian elements with 
 - **Five colour themes** — Aero Night, Aero Day, Luna Blue, Aurora and High Contrast, restyling the shell *and* the viewport (<kbd>T</kbd> or <kbd>F3</kbd>).
 - **Inspector** — click any body for live distance, period, speed, mass and facts; focus or follow it around its orbit.
 - **Scenario files** — the Library tab exports and imports plain `.json` scenarios you can share; five presets from *Inner System* to a *Binary Star* run.
+- **Procedural sound** — every effect (select blips, add/remove sweeps, collision thuds, the gravity-release whoosh, theme switches) is synthesized live with the Web Audio API — no audio files. Master volume slider, mute, and an optional ambient space hum under the 🔊 button (<kbd>M</kbd> to mute).
 
 ## Run it
 
@@ -33,6 +34,7 @@ Pushes to `main` deploy automatically to **GitHub Pages** via the workflow in `.
 | click / double-click | select / select + follow |
 | <kbd>F</kbd> | focus the selected body |
 | <kbd>T</kbd>, <kbd>F3</kbd> | cycle theme |
+| <kbd>M</kbd> | mute / unmute sound |
 | <kbd>C</kbd> / <kbd>L</kbd> | Create / Library tab |
 | <kbd>Delete</kbd> | remove the selected body |
 | Create → *Place by drag* | press to set position, drag to aim velocity, release to launch |
@@ -44,6 +46,7 @@ index.html        app shell: transport bar, viewport, inspector, status bar
 css/style.css     the five themes ([data-theme]) and all chrome styling
 js/data.js        JPL elements, body catalogue, themes, presets, part templates
 js/sim.js         ephemeris math + velocity-Verlet N-body engine
+js/audio.js       Web Audio sound synthesis (SFX, volume, ambient hum)
 js/main.js        canvas renderer and interface
 assets/           favicon
 404.html          themed not-found page for GitHub Pages

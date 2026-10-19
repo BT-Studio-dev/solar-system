@@ -40,6 +40,18 @@
 
     <div class="spacer"></div>
 
+    <div class="group vol-wrap">
+      <button id="btn-volume" class="icon" title="Sound (M)">&#128266;</button>
+      <div id="vol-pop" hidden>
+        <div class="vol-row">
+          <button id="btn-mute" class="icon" title="Mute / unmute (M)">&#128266;</button>
+          <input type="range" id="vol-slider" min="0" max="100" step="1" value="70" title="Master volume">
+          <output id="vol-out">70%</output>
+        </div>
+        <label class="vol-amb"><input type="checkbox" id="vol-ambient"> Ambient space hum</label>
+      </div>
+    </div>
+
     <div class="group">
       <span id="gravity-chip" title="Release the planets from their ephemeris rails and let everything pull on everything">Gravity: rails</span>
       <button id="btn-theme" class="icon" title="Cycle colour theme (T)">◐</button>
@@ -177,7 +189,7 @@
   <footer id="statusbar">
     <span id="status-count">0 bodies</span>
     <span id="status-mode">ephemeris rails</span>
-    <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · C create · L library</span>
+    <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · M sound · C create · L library</span>
     <span class="right"><span id="status-fps">60 fps</span><span id="status-size">—</span></span>
   </footer>
 
@@ -194,6 +206,7 @@
       <tr><td>double-click</td><td>select and follow a body</td></tr>
       <tr><td>F</td><td>focus the selected body</td></tr>
       <tr><td>T / F3</td><td>cycle the colour theme</td></tr>
+      <tr><td>M</td><td>mute / unmute sound</td></tr>
       <tr><td>C / L</td><td>open the Create / Library tab</td></tr>
       <tr><td>Delete</td><td>remove the selected body</td></tr>
       <tr><td>Gravity chip</td><td>release every planet into live N-body gravity</td></tr>
@@ -204,6 +217,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/sim.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

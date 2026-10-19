@@ -30,7 +30,7 @@ function makeEl(id) {
     setAttribute() {}, getAttribute: () => null,
     appendChild(c) { this.children.push(c); return c; },
     addEventListener(type, fn) { (listeners[type] = listeners[type] || []).push(fn); },
-    dispatch(type, ev) { for (const f of listeners[type] || []) f(ev || { target: el, preventDefault() {}, clientX: 0, clientY: 0 }); },
+    dispatch(type, ev) { for (const f of listeners[type] || []) f(ev || { target: el, preventDefault() {}, stopPropagation() {}, clientX: 0, clientY: 0 }); },
     querySelectorAll: () => [],
     querySelector: () => makeEl('q'),
     closest: () => null,
@@ -199,6 +199,25 @@ els.get('tab-create').dispatch('click');
 els.get('btn-add').dispatch('click');
 for (let i = 0; i < THEMES.length; i++) els.get('btn-theme').dispatch('click');
 frames(20);
+
+/* ------------------------------------------------------- audio module -- */
+check(typeof Sfx === 'object' && !!Sfx, 'Sfx module present');
+check(Math.abs(Sfx.volume - 0.7) < 0.01, `default volume 0.7 (${Sfx.volume})`);
+check(Sfx.muted === false, 'not muted by default');
+Sfx.setVolume(0.35);
+check(Sfx.volume === 0.35, 'setVolume persists state');
+Sfx.setMuted(true);
+check(Sfx.muted === true, 'setMuted(true)');
+Sfx.setMuted(false);
+Sfx.setAmbient(true);
+Sfx.setAmbient(false);
+for (const fn of ['select', 'add', 'remove', 'merge', 'gravity', 'load', 'theme', 'tick']) Sfx[fn]();
+check(true, 'all sound effects callable without AudioContext (safe no-op)');
+els.get('btn-volume').dispatch('click');
+els.get('btn-mute').dispatch('click');
+els.get('vol-slider').dispatch('input', { target: els.get('vol-slider') });
+els.get('vol-ambient').dispatch('change', { target: els.get('vol-ambient') });
+check(true, 'volume UI interactions do not throw');
 
 console.log(failures ? `\nFAILED (${failures})` : '\nALL SMOKE TESTS PASSED');
 process.exit(failures ? 1 : 0);

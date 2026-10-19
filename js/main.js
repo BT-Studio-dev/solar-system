@@ -490,6 +490,7 @@
   }
 
   function loadScenarioNamed(id, label) {
+    Sfx.load();
     state.sim.loadPreset(id);
     state.presetName = label;
     state.selectedId = null;
@@ -519,6 +520,7 @@
     });
     if (!name) $('c-name').dataset.touched = '0';
     const added = sim.bodies[sim.bodies.length - 1];
+    Sfx.add();
     toast(`${added.name} added — ${fmtNumber(dist, 'AU')} orbit`);
     state.selectedId = added.id;
     switchTab('inspect');
@@ -580,12 +582,67 @@
           state.cam.followId = null;
           state.presetName = 'Imported scenario';
           syncGravityChip();
+          Sfx.load();
           toast(`Scenario loaded — ${state.sim.bodies.length} bodies`);
           renderLibraryCurrent();
         } else toast('Not a scenario file', 'warn');
       } catch { toast('Could not read that file', 'warn'); }
     };
     fr.readAsText(file);
+  }
+
+  /* ------------------------------------------------------- volume ui */
+
+  function volIcons() {
+    const icon = Sfx.muted ? '\u{1F507}' : '\u{1F50A}';
+    $('btn-volume').textContent = icon;
+    $('btn-mute').textContent = icon;
+    $('btn-mute').classList.toggle('off', Sfx.muted);
+    $('btn-volume').title = Sfx.muted ? 'Sound: muted (M)' : 'Sound (M)';
+  }
+
+  function setVolPop(open) {
+    $('vol-pop').hidden = !open;
+  }
+
+  function initVolumeUi() {
+    $('vol-slider').value = Math.round(Sfx.volume * 100);
+    $('vol-out').textContent = Math.round(Sfx.volume * 100) + '%';
+    $('vol-ambient').checked = Sfx.ambient;
+    volIcons();
+
+    $('btn-volume').addEventListener('click', (e) => {
+      e.stopPropagation();
+      Sfx.unlock();
+      setVolPop($('vol-pop').hidden);
+    });
+    $('btn-mute').addEventListener('click', () => {
+      Sfx.setMuted(!Sfx.muted);
+      volIcons();
+      if (!Sfx.muted) Sfx.tick();
+    });
+    let lastPreview = 0;
+    $('vol-slider').addEventListener('input', (e) => {
+      const v = parseInt(e.target.value, 10) / 100;
+      Sfx.setVolume(v);
+      $('vol-out').textContent = e.target.value + '%';
+      const now = performance.now();
+      if (now - lastPreview > 90) { lastPreview = now; Sfx.tick(); }
+    });
+    $('vol-ambient').addEventListener('change', (e) => {
+      Sfx.setAmbient(e.target.checked);
+      if (e.target.checked) Sfx.tick();
+    });
+    // close when clicking anywhere else
+    document.addEventListener('pointerdown', (e) => {
+      if ($('vol-pop').hidden) return;
+      if (e.target.closest && (e.target.closest('#vol-pop') || e.target.closest('#btn-volume'))) return;
+      setVolPop(false);
+    });
+    // first gesture anywhere unlocks the audio context
+    const unlock = () => { Sfx.unlock(); };
+    window.addEventListener('pointerdown', unlock, { once: true, capture: true });
+    window.addEventListener('keydown', unlock, { once: true, capture: true });
   }
 
   /* -------------------------------------------------------------- toasts */
@@ -615,6 +672,7 @@
   function cycleTheme() {
     const i = THEMES.findIndex(t => t.id === state.theme.id);
     applyTheme(i + 1);
+    Sfx.theme();
     toast(`Theme: ${state.theme.name}`);
   }
 
@@ -680,6 +738,7 @@
           name: $('c-name').value.trim() || undefined,
           posAU: [state.drag.ax, state.drag.ay, 0], velAUd: [vx, vy, 0],
         });
+        Sfx.add();
         toast('Body placed by drag');
         state.drag = null;
         setPlaceMode(false);
@@ -692,6 +751,7 @@
           const hit = pickBody(e.clientX - r.left, e.clientY - r.top);
           if (hit) {
             state.selectedId = hit.id;
+            Sfx.select();
             switchTab('inspect');
           } else state.selectedId = null;
           renderInspector();
@@ -741,6 +801,7 @@
     $('btn-gravity').addEventListener('click', () => {
       state.sim.releaseToNBody();
       syncGravityChip();
+      Sfx.gravity();
       toast('Gravity released');
     });
     $('btn-theme').addEventListener('click', cycleTheme);
@@ -767,11 +828,13 @@
     });
     $('btn-release').addEventListener('click', () => {
       state.sim.releaseToNBody();
-      $('btn-gravity').classList.add('on');
+      syncGravityChip();
+      Sfx.gravity();
       renderInspector();
     });
     $('btn-remove').addEventListener('click', () => {
       if (state.sim.removeBody(state.selectedId)) {
+        Sfx.remove();
         state.selectedId = null;
         if (state.cam.followId === state.selectedId) state.cam.followId = null;
         renderInspector();
@@ -846,8 +909,13 @@
         case 'f': case 'F': $('btn-focus').click(); break;
         case 't': case 'T': case 'F3': cycleTheme(); e.preventDefault(); break;
         case 'c': case 'C': switchTab('create'); break;
+        case 'm': case 'M':
+          Sfx.setMuted(!Sfx.muted);
+          volIcons();
+          if (!Sfx.muted) Sfx.tick();
+          break;
         case 'l': case 'L': switchTab('library'); break;
-        case 'Escape': $('help').classList.remove('open'); state.selectedId = null; renderInspector(); break;
+        case 'Escape': $('help').classList.remove('open'); setVolPop(false); state.selectedId = null; renderInspector(); break;
         case 'Delete': case 'Backspace': if (selected() && canRemove(selected())) $('btn-remove').click(); break;
         case '+': case '=': state.cam.ppAU = clamp(state.cam.ppAU * 1.25, 2, 40000); break;
         case '-': state.cam.ppAU = clamp(state.cam.ppAU / 1.25, 2, 40000); break;
@@ -881,7 +949,10 @@
     render();
     updateHud();
 
-    for (const ev of state.sim.drainEvents()) toast(ev.text, ev.kind === 'merge' ? 'warn' : undefined);
+    for (const ev of state.sim.drainEvents()) {
+      if (ev.kind === 'merge') Sfx.merge();
+      toast(ev.text, ev.kind === 'merge' ? 'warn' : undefined);
+    }
     requestAnimationFrame(frame);
   }
 
@@ -936,6 +1007,7 @@
     $('speed-out').textContent = fmtSpeed(1);
 
     bindEvents();
+    initVolumeUi();
     switchTab('inspect');
     requestAnimationFrame(frame);
 

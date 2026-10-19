@@ -2,7 +2,7 @@
 <!--
   Solar System Sandbox v1.0.0 — STANDALONE SINGLE-FILE BUILD
   The complete simulator in one file: open anywhere, works offline.
-  Source repo layout: index.html + css/style.css + js/{data,sim,main}.js
+  Regenerate with: python3 tools/build_dist.py
 -->
 
 <html lang="en" data-theme="aero-night">
@@ -146,6 +146,29 @@ select {
 
 .spacer { flex: 1; }
 .theme-label { font-size: 11px; color: var(--muted); min-width: 76px; }
+
+/* ------------------------------------------------------- volume popup */
+
+.vol-wrap { position: relative; }
+#vol-pop {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 30;
+  width: 236px; padding: 12px 14px;
+  background: var(--panel-solid); border: 1px solid var(--line-2);
+  border-radius: 12px; box-shadow: var(--shadow);
+  cursor: default;
+}
+#vol-pop[hidden] { display: none; }
+.vol-row { display: flex; align-items: center; gap: 9px; }
+.vol-row button { flex: none; }
+.vol-row input[type='range'] { flex: 1; width: auto; accent-color: var(--accent); }
+#vol-out { font: 600 11px Consolas, ui-monospace, monospace; color: var(--accent-2); min-width: 34px; text-align: right; }
+.vol-amb {
+  display: flex; align-items: center; gap: 7px; margin-top: 10px;
+  font-size: 12px; color: var(--muted); cursor: pointer;
+}
+.vol-amb input { accent-color: var(--accent); }
+#btn-mute.off { color: var(--danger); }
+
 #gravity-chip {
   font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--muted); border: 1px dashed var(--line-2);
@@ -329,6 +352,18 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
 
     <div class="spacer"></div>
 
+    <div class="group vol-wrap">
+      <button id="btn-volume" class="icon" title="Sound (M)">&#128266;</button>
+      <div id="vol-pop" hidden>
+        <div class="vol-row">
+          <button id="btn-mute" class="icon" title="Mute / unmute (M)">&#128266;</button>
+          <input type="range" id="vol-slider" min="0" max="100" step="1" value="70" title="Master volume">
+          <output id="vol-out">70%</output>
+        </div>
+        <label class="vol-amb"><input type="checkbox" id="vol-ambient"> Ambient space hum</label>
+      </div>
+    </div>
+
     <div class="group">
       <span id="gravity-chip" title="Release the planets from their ephemeris rails and let everything pull on everything">Gravity: rails</span>
       <button id="btn-theme" class="icon" title="Cycle colour theme (T)">◐</button>
@@ -466,7 +501,7 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
   <footer id="statusbar">
     <span id="status-count">0 bodies</span>
     <span id="status-mode">ephemeris rails</span>
-    <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · C create · L library</span>
+    <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · M sound · C create · L library</span>
     <span class="right"><span id="status-fps">60 fps</span><span id="status-size">—</span></span>
   </footer>
 
@@ -483,6 +518,7 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
       <tr><td>double-click</td><td>select and follow a body</td></tr>
       <tr><td>F</td><td>focus the selected body</td></tr>
       <tr><td>T / F3</td><td>cycle the colour theme</td></tr>
+      <tr><td>M</td><td>mute / unmute sound</td></tr>
       <tr><td>C / L</td><td>open the Create / Library tab</td></tr>
       <tr><td>Delete</td><td>remove the selected body</td></tr>
       <tr><td>Gravity chip</td><td>release every planet into live N-body gravity</td></tr>
@@ -492,8 +528,6 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
 </div>
 
 <script>
-/* Solar System Sandbox v1.0.0 — single-file standalone build.
- * Open in any browser; everything (styles, data, engine, UI) is inline. */
 'use strict';
 /* Solar System Sandbox — static data.
  *
@@ -773,8 +807,6 @@ function fmtMassEarth(mEarth) {
 
 </script>
 <script>
-/* Solar System Sandbox v1.0.0 — single-file standalone build.
- * Open in any browser; everything (styles, data, engine, UI) is inline. */
 'use strict';
 /* Solar System Sandbox — simulation engine.
  *
@@ -1207,8 +1239,197 @@ class Simulation {
 
 </script>
 <script>
-/* Solar System Sandbox v1.0.0 — single-file standalone build.
- * Open in any browser; everything (styles, data, engine, UI) is inline. */
+'use strict';
+/* Solar System Sandbox — procedural sound effects (Web Audio API).
+ *
+ * Every sound is synthesized from oscillators and shaped noise: there are no
+ * audio files to load, the whole soundscape is a few KB of code.  A master
+ * gain node carries the volume slider and mute switch; an optional ambient
+ * drone adds a barely-there space hum.  Browsers only allow audio after a
+ * user gesture, so the context is created/resumed lazily on first
+ * pointerdown/keydown — before that, every call is a safe no-op.
+ */
+
+const Sfx = (() => {
+  const VOL_KEY = 'sss-volume', MUTE_KEY = 'sss-muted', AMB_KEY = 'sss-ambient';
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  let ctx = null;
+  let master = null;
+  let ambient = null;          // { oscs: [...], lfo } while playing
+  let volume = Math.min(1, Math.max(0, parseFloat(store.get(VOL_KEY) ?? '0.7') || 0.7));
+  let muted = store.get(MUTE_KEY) === '1';
+  let ambientOn = store.get(AMB_KEY) === '1';
+  const lastPlayed = new Map(); // sound name -> time of last play (throttle)
+
+  function ensure() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { ctx = new AC(); } catch { return null; }
+      master = ctx.createGain();
+      master.gain.value = muted ? 0 : volume;
+      master.connect(ctx.destination);
+      if (ambientOn) startAmbient();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+
+  function throttled(name, ms) {
+    const now = performance.now();
+    if (now - (lastPlayed.get(name) || 0) < ms) return true;
+    lastPlayed.set(name, now);
+    return false;
+  }
+
+  /* One enveloped oscillator sweep. */
+  function tone({ type = 'sine', from = 440, to = 0, dur = 0.15, peak = 0.4, delay = 0 }) {
+    const c = ensure();
+    if (!c) return;
+    const t0 = c.currentTime + delay;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(Math.max(from, 1), t0);
+    if (to) osc.frequency.exponentialRampToValueAtTime(Math.max(to, 1), t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak * 0.5, 0.0001), t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g);
+    g.connect(master);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  }
+
+  /* A burst of shaped white noise through a sweeping filter. */
+  function noise({ dur = 0.3, peak = 0.35, from = 1000, to = 200, type = 'lowpass', delay = 0 }) {
+    const c = ensure();
+    if (!c) return;
+    const t0 = c.currentTime + delay;
+    const len = Math.max(1, Math.floor((dur + 0.05) * c.sampleRate));
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const filt = c.createBiquadFilter();
+    filt.type = type;
+    filt.frequency.setValueAtTime(Math.max(from, 10), t0);
+    filt.frequency.exponentialRampToValueAtTime(Math.max(to, 10), t0 + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(peak * 0.4, 0.0001), t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(filt);
+    filt.connect(g);
+    g.connect(master);
+    src.start(t0);
+    src.stop(t0 + dur + 0.1);
+  }
+
+  /* ------------------------------------------------------------- ambient */
+
+  function startAmbient() {
+    const c = ensure();
+    if (!c || ambient) return;
+    const g = c.createGain();
+    g.gain.value = 0.05;
+    const filt = c.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = 220;
+    const oscs = [55, 82.41, 110].map((f, i) => {
+      const o = c.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f;
+      o.detune.value = i * 4 - 4;
+      o.connect(filt);
+      o.start();
+      return o;
+    });
+    // slow swell so the hum breathes instead of sitting flat
+    const lfo = c.createOscillator();
+    const lfoGain = c.createGain();
+    lfo.frequency.value = 0.05;
+    lfoGain.gain.value = 0.02;
+    lfo.connect(lfoGain);
+    lfoGain.connect(g.gain);
+    lfo.start();
+    filt.connect(g);
+    g.connect(master);
+    ambient = { oscs, lfo, g };
+  }
+
+  function stopAmbient() {
+    if (!ambient) return;
+    const t = ctx.currentTime;
+    ambient.g.gain.setTargetAtTime(0.0001, t, 0.2);
+    const dying = ambient;
+    setTimeout(() => {
+      for (const o of dying.oscs) { try { o.stop(); } catch {} }
+      try { dying.lfo.stop(); } catch {}
+    }, 800);
+    ambient = null;
+  }
+
+  /* ---------------------------------------------------------------- api */
+
+  return {
+    /* individual effects */
+    select() { if (!throttled('select', 60)) tone({ from: 660, to: 920, dur: 0.06, peak: 0.22 }); },
+    add() {
+      tone({ from: 300, to: 620, dur: 0.13, peak: 0.5 });
+      tone({ type: 'triangle', from: 620, to: 980, dur: 0.1, peak: 0.18, delay: 0.06 });
+    },
+    remove() { tone({ from: 520, to: 170, dur: 0.22, peak: 0.4 }); },
+    merge() {
+      if (throttled('merge', 120)) return;
+      tone({ from: 140, to: 42, dur: 0.5, peak: 0.9 });
+      noise({ dur: 0.32, from: 900, to: 110, peak: 0.45 });
+    },
+    gravity() {
+      noise({ dur: 0.7, from: 260, to: 2600, type: 'bandpass', peak: 0.4 });
+      tone({ from: 170, to: 430, dur: 0.6, peak: 0.22 });
+    },
+    load() {
+      tone({ from: 392, dur: 0.16, peak: 0.34 });
+      tone({ from: 523.25, dur: 0.18, peak: 0.34, delay: 0.09 });
+      tone({ from: 659.25, dur: 0.24, peak: 0.28, delay: 0.18 });
+    },
+    theme() { tone({ type: 'triangle', from: 520, to: 800, dur: 0.09, peak: 0.26 }); },
+    tick() { if (!throttled('tick', 45)) tone({ from: 620, dur: 0.035, peak: 0.14 }); },
+
+    /* lifecycle */
+    unlock() { ensure(); },
+
+    setVolume(v) {
+      volume = Math.min(1, Math.max(0, +v || 0));
+      store.set(VOL_KEY, String(volume));
+      if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.02);
+    },
+    setMuted(m) {
+      muted = !!m;
+      store.set(MUTE_KEY, muted ? '1' : '0');
+      if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.02);
+    },
+    setAmbient(on) {
+      ambientOn = !!on;
+      store.set(AMB_KEY, ambientOn ? '1' : '0');
+      if (ambientOn) startAmbient();
+      else stopAmbient();
+    },
+
+    get volume() { return volume; },
+    get muted() { return muted; },
+    get ambient() { return ambientOn; },
+  };
+})();
+
+</script>
+<script>
 'use strict';
 /* Solar System Sandbox — renderer and interface. */
 
@@ -1701,6 +1922,7 @@ class Simulation {
   }
 
   function loadScenarioNamed(id, label) {
+    Sfx.load();
     state.sim.loadPreset(id);
     state.presetName = label;
     state.selectedId = null;
@@ -1730,6 +1952,7 @@ class Simulation {
     });
     if (!name) $('c-name').dataset.touched = '0';
     const added = sim.bodies[sim.bodies.length - 1];
+    Sfx.add();
     toast(`${added.name} added — ${fmtNumber(dist, 'AU')} orbit`);
     state.selectedId = added.id;
     switchTab('inspect');
@@ -1791,12 +2014,67 @@ class Simulation {
           state.cam.followId = null;
           state.presetName = 'Imported scenario';
           syncGravityChip();
+          Sfx.load();
           toast(`Scenario loaded — ${state.sim.bodies.length} bodies`);
           renderLibraryCurrent();
         } else toast('Not a scenario file', 'warn');
       } catch { toast('Could not read that file', 'warn'); }
     };
     fr.readAsText(file);
+  }
+
+  /* ------------------------------------------------------- volume ui */
+
+  function volIcons() {
+    const icon = Sfx.muted ? '\u{1F507}' : '\u{1F50A}';
+    $('btn-volume').textContent = icon;
+    $('btn-mute').textContent = icon;
+    $('btn-mute').classList.toggle('off', Sfx.muted);
+    $('btn-volume').title = Sfx.muted ? 'Sound: muted (M)' : 'Sound (M)';
+  }
+
+  function setVolPop(open) {
+    $('vol-pop').hidden = !open;
+  }
+
+  function initVolumeUi() {
+    $('vol-slider').value = Math.round(Sfx.volume * 100);
+    $('vol-out').textContent = Math.round(Sfx.volume * 100) + '%';
+    $('vol-ambient').checked = Sfx.ambient;
+    volIcons();
+
+    $('btn-volume').addEventListener('click', (e) => {
+      e.stopPropagation();
+      Sfx.unlock();
+      setVolPop($('vol-pop').hidden);
+    });
+    $('btn-mute').addEventListener('click', () => {
+      Sfx.setMuted(!Sfx.muted);
+      volIcons();
+      if (!Sfx.muted) Sfx.tick();
+    });
+    let lastPreview = 0;
+    $('vol-slider').addEventListener('input', (e) => {
+      const v = parseInt(e.target.value, 10) / 100;
+      Sfx.setVolume(v);
+      $('vol-out').textContent = e.target.value + '%';
+      const now = performance.now();
+      if (now - lastPreview > 90) { lastPreview = now; Sfx.tick(); }
+    });
+    $('vol-ambient').addEventListener('change', (e) => {
+      Sfx.setAmbient(e.target.checked);
+      if (e.target.checked) Sfx.tick();
+    });
+    // close when clicking anywhere else
+    document.addEventListener('pointerdown', (e) => {
+      if ($('vol-pop').hidden) return;
+      if (e.target.closest && (e.target.closest('#vol-pop') || e.target.closest('#btn-volume'))) return;
+      setVolPop(false);
+    });
+    // first gesture anywhere unlocks the audio context
+    const unlock = () => { Sfx.unlock(); };
+    window.addEventListener('pointerdown', unlock, { once: true, capture: true });
+    window.addEventListener('keydown', unlock, { once: true, capture: true });
   }
 
   /* -------------------------------------------------------------- toasts */
@@ -1826,6 +2104,7 @@ class Simulation {
   function cycleTheme() {
     const i = THEMES.findIndex(t => t.id === state.theme.id);
     applyTheme(i + 1);
+    Sfx.theme();
     toast(`Theme: ${state.theme.name}`);
   }
 
@@ -1891,6 +2170,7 @@ class Simulation {
           name: $('c-name').value.trim() || undefined,
           posAU: [state.drag.ax, state.drag.ay, 0], velAUd: [vx, vy, 0],
         });
+        Sfx.add();
         toast('Body placed by drag');
         state.drag = null;
         setPlaceMode(false);
@@ -1903,6 +2183,7 @@ class Simulation {
           const hit = pickBody(e.clientX - r.left, e.clientY - r.top);
           if (hit) {
             state.selectedId = hit.id;
+            Sfx.select();
             switchTab('inspect');
           } else state.selectedId = null;
           renderInspector();
@@ -1952,6 +2233,7 @@ class Simulation {
     $('btn-gravity').addEventListener('click', () => {
       state.sim.releaseToNBody();
       syncGravityChip();
+      Sfx.gravity();
       toast('Gravity released');
     });
     $('btn-theme').addEventListener('click', cycleTheme);
@@ -1978,11 +2260,13 @@ class Simulation {
     });
     $('btn-release').addEventListener('click', () => {
       state.sim.releaseToNBody();
-      $('btn-gravity').classList.add('on');
+      syncGravityChip();
+      Sfx.gravity();
       renderInspector();
     });
     $('btn-remove').addEventListener('click', () => {
       if (state.sim.removeBody(state.selectedId)) {
+        Sfx.remove();
         state.selectedId = null;
         if (state.cam.followId === state.selectedId) state.cam.followId = null;
         renderInspector();
@@ -2057,8 +2341,13 @@ class Simulation {
         case 'f': case 'F': $('btn-focus').click(); break;
         case 't': case 'T': case 'F3': cycleTheme(); e.preventDefault(); break;
         case 'c': case 'C': switchTab('create'); break;
+        case 'm': case 'M':
+          Sfx.setMuted(!Sfx.muted);
+          volIcons();
+          if (!Sfx.muted) Sfx.tick();
+          break;
         case 'l': case 'L': switchTab('library'); break;
-        case 'Escape': $('help').classList.remove('open'); state.selectedId = null; renderInspector(); break;
+        case 'Escape': $('help').classList.remove('open'); setVolPop(false); state.selectedId = null; renderInspector(); break;
         case 'Delete': case 'Backspace': if (selected() && canRemove(selected())) $('btn-remove').click(); break;
         case '+': case '=': state.cam.ppAU = clamp(state.cam.ppAU * 1.25, 2, 40000); break;
         case '-': state.cam.ppAU = clamp(state.cam.ppAU / 1.25, 2, 40000); break;
@@ -2092,7 +2381,10 @@ class Simulation {
     render();
     updateHud();
 
-    for (const ev of state.sim.drainEvents()) toast(ev.text, ev.kind === 'merge' ? 'warn' : undefined);
+    for (const ev of state.sim.drainEvents()) {
+      if (ev.kind === 'merge') Sfx.merge();
+      toast(ev.text, ev.kind === 'merge' ? 'warn' : undefined);
+    }
     requestAnimationFrame(frame);
   }
 
@@ -2147,6 +2439,7 @@ class Simulation {
     $('speed-out').textContent = fmtSpeed(1);
 
     bindEvents();
+    initVolumeUi();
     switchTab('inspect');
     requestAnimationFrame(frame);
 
