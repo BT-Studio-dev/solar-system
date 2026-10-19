@@ -1,0 +1,2163 @@
+<!doctype html>
+<!--
+  Solar System Sandbox v1.0.0 — STANDALONE SINGLE-FILE BUILD
+  The complete simulator in one file: open anywhere, works offline.
+  Source repo layout: index.html + css/style.css + js/{data,sim,main}.js
+-->
+
+<html lang="en" data-theme="aero-night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar System Sandbox</title>
+<meta name="description" content="A real-time solar system simulator and N-body gravity sandbox in your browser: JPL approximate ephemerides, five colour themes, drop-in scenario files.">
+<meta name="theme-color" content="#0b111f">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8' fill='%235f9fe8'/%3E%3Cellipse cx='16' cy='16' rx='14' ry='4' fill='none' stroke='%23e0cb96' stroke-width='1.6' transform='rotate(-18 16 16)'/%3E%3C/svg%3E">
+<style>
+/* Solar System Sandbox — shell styling. Five palettes via [data-theme]. */
+
+:root, :root[data-theme='aero-night'] {
+  --bg0: #060911; --bg1: #0c1424;
+  --panel: rgba(23, 36, 61, .82); --panel-solid: #16233c; --panel-2: rgba(13, 22, 38, .92);
+  --line: rgba(132, 178, 255, .18); --line-2: rgba(132, 178, 255, .38);
+  --text: #e8f0ff; --muted: #9db0ce; --faint: #7d90ab;
+  --accent: #56a0ff; --accent-2: #8cc4ff; --accent-text: #0b1830;
+  --good: #68d6a8; --warn: #ffc46e; --danger: #ff7a6e;
+  --chip: rgba(86, 160, 255, .14);
+  --shadow: 0 18px 44px rgba(0, 0, 0, .45);
+  --glass-blur: blur(10px);
+  color-scheme: dark;
+}
+:root[data-theme='aero-day'] {
+  --bg0: #eef4fc; --bg1: #ccd9ee;
+  --panel: rgba(255, 255, 255, .78); --panel-solid: #f2f6fc; --panel-2: rgba(238, 244, 252, .94);
+  --line: rgba(28, 64, 128, .22); --line-2: rgba(28, 64, 128, .45);
+  --text: #16263f; --muted: #45597a; --faint: #6b7f9e;
+  --accent: #2256a4; --accent-2: #1c4080; --accent-text: #ffffff;
+  --good: #157a4e; --warn: #9a6a10; --danger: #b3372c;
+  --chip: rgba(34, 86, 164, .12);
+  --shadow: 0 14px 34px rgba(30, 50, 90, .25);
+  --glass-blur: blur(8px);
+  color-scheme: light;
+}
+:root[data-theme='luna'] {
+  --bg0: #0a1c3c; --bg1: #123a6e;
+  --panel: rgba(226, 232, 214, .94); --panel-solid: #eceadb; --panel-2: rgba(236, 234, 219, .96);
+  --line: rgba(30, 50, 90, .35); --line-2: rgba(30, 50, 90, .55);
+  --text: #1d2733; --muted: #46586e; --faint: #66788e;
+  --accent: #3a6ea5; --accent-2: #2c5680; --accent-text: #ffffff;
+  --good: #2c7a4a; --warn: #a4710f; --danger: #a83a30;
+  --chip: rgba(58, 110, 165, .16);
+  --shadow: 0 14px 30px rgba(6, 20, 44, .5);
+  --glass-blur: blur(4px);
+  color-scheme: light;
+}
+:root[data-theme='aurora'] {
+  --bg0: #03151a; --bg1: #0a2430;
+  --panel: rgba(10, 42, 52, .84); --panel-solid: #0c2a34; --panel-2: rgba(7, 30, 38, .94);
+  --line: rgba(110, 240, 210, .2); --line-2: rgba(110, 240, 210, .45);
+  --text: #dcf8f0; --muted: #8fb8ae; --faint: #6f968d;
+  --accent: #3ee6c0; --accent-2: #7ff0d8; --accent-text: #04241c;
+  --good: #7ff0d8; --warn: #ffd982; --danger: #ff8d7a;
+  --chip: rgba(62, 230, 192, .13);
+  --shadow: 0 18px 44px rgba(0, 0, 0, .5);
+  --glass-blur: blur(10px);
+  color-scheme: dark;
+}
+:root[data-theme='high-contrast'] {
+  --bg0: #000000; --bg1: #000000;
+  --panel: rgba(0, 0, 0, .92); --panel-solid: #000000; --panel-2: rgba(0, 0, 0, .96);
+  --line: #ffffff; --line-2: #ffffff;
+  --text: #ffffff; --muted: #e8e8e8; --faint: #c8c8c8;
+  --accent: #ffe600; --accent-2: #ffe600; --accent-text: #000000;
+  --good: #7dff8a; --warn: #ffe600; --danger: #ff8d7a;
+  --chip: rgba(255, 230, 0, .18);
+  --shadow: none;
+  --glass-blur: none;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font: 13px/1.45 "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  color: var(--text);
+  background: var(--bg0);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app {
+  display: grid;
+  grid-template-rows: 52px 1fr 26px;
+  height: 100vh;
+}
+
+/* ------------------------------------------------------------- top bar */
+
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 14px;
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: var(--glass-blur);
+  z-index: 5;
+}
+.brand {
+  display: flex; flex-direction: column; line-height: 1.15;
+  padding-right: 8px; border-right: 1px solid var(--line);
+}
+.brand strong { font-size: 13.5px; letter-spacing: .01em; }
+.brand small { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .14em; }
+
+.group { display: flex; align-items: center; gap: 8px; }
+.group label { font-size: 10px; letter-spacing: .12em; color: var(--faint); text-transform: uppercase; }
+
+button {
+  font: inherit; color: inherit;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: background .12s, border-color .12s, transform .06s;
+}
+button:hover { border-color: var(--line-2); }
+button:active { transform: translateY(1px); }
+button.on, button.primary {
+  background: var(--accent); color: var(--accent-text);
+  border-color: var(--accent); font-weight: 600;
+}
+button.icon { width: 34px; height: 30px; padding: 0; text-align: center; font-size: 13px; }
+#btn-play { width: 40px; height: 34px; font-size: 14px; background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 700; }
+#btn-play.paused { background: var(--chip); color: var(--text); }
+
+input[type='range'] { accent-color: var(--accent); width: 130px; }
+select {
+  font: inherit; color: var(--text);
+  background: var(--chip); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 8px;
+}
+#epoch { font: 12px Consolas, ui-monospace, monospace; color: var(--muted); min-width: 150px; text-align: center; }
+
+.spacer { flex: 1; }
+.theme-label { font-size: 11px; color: var(--muted); min-width: 76px; }
+#gravity-chip {
+  font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); border: 1px dashed var(--line-2);
+  padding: 5px 10px; border-radius: 999px; cursor: pointer;
+}
+#gravity-chip.on { color: var(--good); border-style: solid; border-color: var(--good); }
+
+/* --------------------------------------------------------------- main */
+
+#main { display: grid; grid-template-columns: 1fr 324px; min-height: 0; }
+#stage { position: relative; min-width: 0; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+#hover-chip {
+  position: absolute; display: none; z-index: 4; pointer-events: none;
+  background: var(--panel-solid); border: 1px solid var(--line-2);
+  border-radius: 9px; padding: 7px 10px; box-shadow: var(--shadow);
+}
+#hover-name { font-weight: 600; display: block; }
+#hover-info { font-size: 11px; color: var(--muted); }
+
+/* ---------------------------------------------------------- inspector */
+
+#inspector {
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  backdrop-filter: var(--glass-blur);
+  display: flex; flex-direction: column;
+  min-height: 0; z-index: 4;
+}
+.tabs { display: flex; gap: 6px; padding: 10px 12px 8px; }
+.tabs button { flex: 1; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; padding: 7px 0; }
+.panel { padding: 4px 14px 16px; overflow-y: auto; flex: 1; min-height: 0; }
+.panel::-webkit-scrollbar { width: 8px; }
+.panel::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 4px; }
+
+#insp-empty { color: var(--muted); padding: 26px 8px; text-align: center; }
+#insp-empty .big { font-size: 26px; display: block; margin-bottom: 10px; opacity: .6; }
+
+#insp-head { display: flex; align-items: baseline; gap: 9px; margin: 4px 0 2px; }
+#insp-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; align-self: center; box-shadow: 0 0 8px currentColor; }
+#insp-name { font-size: 21px; font-weight: 600; letter-spacing: -.01em; margin: 0; }
+#insp-kind { color: var(--muted); font-size: 11.5px; }
+
+.facts {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0;
+}
+.fact {
+  background: var(--chip); border: 1px solid var(--line);
+  border-radius: 10px; padding: 8px 10px;
+}
+.fact small { display: block; font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.fact b { font: 600 13px Consolas, ui-monospace, monospace; }
+.fact small + b { display: block; margin-top: 2px; }
+
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.actions .danger { color: var(--danger); border-color: var(--danger); }
+#insp-desc { color: var(--muted); border-left: 2px solid var(--accent); padding-left: 10px; margin: 12px 0; }
+#insp-extra .fact-row { display: flex; justify-content: space-between; padding: 5px 2px; border-bottom: 1px solid var(--line); font-size: 12px; }
+#insp-extra .fact-row span:first-child { color: var(--faint); }
+
+/* create tab */
+.ctl { margin: 12px 0 2px; }
+.ctl .row { display: flex; justify-content: space-between; align-items: baseline; }
+.ctl label { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.ctl output { font: 600 12px Consolas, ui-monospace, monospace; color: var(--accent-2); }
+.ctl input[type='range'] { width: 100%; margin-top: 4px; }
+#type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 8px; }
+#type-grid button { font-size: 12px; padding: 7px 4px; }
+#type-grid button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.tworow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.field label { display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-bottom: 4px; }
+.field select, .field input { width: 100%; }
+input[type='text'], input[type='color'] {
+  font: inherit; color: var(--text);
+  background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+}
+input[type='color'] { padding: 2px 4px; height: 34px; }
+#btn-add { width: 100%; padding: 10px; margin-top: 12px; font-size: 13.5px; }
+.hint { color: var(--faint); font-size: 11.5px; margin-top: 8px; text-align: center; }
+
+#parts-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.part-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; padding: 5px 10px; }
+.part-chip .dot { width: 9px; height: 9px; border-radius: 50%; }
+
+/* library tab */
+#library-current { font: 11px Consolas, ui-monospace, monospace; color: var(--muted); margin: 4px 0 12px; }
+#preset-grid { display: grid; gap: 8px; }
+.preset-card {
+  display: flex; gap: 11px; align-items: center; text-align: left;
+  background: var(--chip); border: 1px solid var(--line); padding: 10px 12px;
+}
+.preset-card:hover { border-color: var(--line-2); }
+.preset-icon { font-size: 17px; width: 26px; text-align: center; flex: none; }
+.preset-card strong { display: block; }
+.preset-card small { color: var(--muted); font-size: 11px; }
+.lib-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.lib-note { color: var(--faint); font-size: 11.5px; margin-top: 10px; }
+
+/* ---------------------------------------------------------- status bar */
+
+#statusbar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 12px; font-size: 11px; color: var(--muted);
+  background: var(--panel-2); border-top: 1px solid var(--line);
+  backdrop-filter: var(--glass-blur);
+}
+#statusbar .kbd { color: var(--faint); }
+#statusbar .right { margin-left: auto; display: flex; gap: 16px; font-family: Consolas, ui-monospace, monospace; }
+
+/* ------------------------------------------------------------- toasts */
+
+#toasts {
+  position: absolute; bottom: 44px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  pointer-events: none; z-index: 9;
+}
+.toast {
+  background: var(--panel-solid); border: 1px solid var(--line-2);
+  color: var(--text); border-radius: 999px; padding: 7px 16px;
+  box-shadow: var(--shadow); opacity: 0; transform: translateY(8px);
+  transition: opacity .25s, transform .25s; font-size: 12.5px;
+}
+.toast.in { opacity: 1; transform: translateY(0); }
+.toast.warn { border-color: var(--warn); color: var(--warn); }
+
+/* --------------------------------------------------------------- help */
+
+#help {
+  position: fixed; inset: 0; z-index: 20; display: none;
+  background: rgba(0, 0, 0, .45); backdrop-filter: blur(3px);
+}
+#help.open { display: grid; place-items: center; }
+#help .card {
+  width: min(480px, calc(100vw - 40px));
+  background: var(--panel-solid); border: 1px solid var(--line-2);
+  border-radius: 16px; padding: 22px 26px; box-shadow: var(--shadow);
+}
+#help h2 { margin: 0 0 12px; font-size: 17px; }
+#help table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+#help td { padding: 5px 4px; border-bottom: 1px solid var(--line); }
+#help td:first-child { font-family: Consolas, ui-monospace, monospace; color: var(--accent-2); width: 130px; }
+#help .foot { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+@media (max-width: 900px) {
+  #main { grid-template-columns: 1fr; grid-template-rows: 1fr 300px; }
+  #inspector { border-left: none; border-top: 1px solid var(--line); }
+  .brand small, #epoch, .group label { display: none; }
+}
+
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">
+      <strong>Solar System Sandbox</strong>
+      <small>Simulator</small>
+    </div>
+
+    <div class="group">
+      <button id="btn-play" class="icon" title="Play / pause (Space)">❚❚</button>
+      <div>
+        <label for="speed">Speed</label>
+        <input type="range" id="speed" min="0" max="1000" value="600">
+      </div>
+      <output id="speed-out">1.00 day/s</output>
+    </div>
+
+    <div class="group">
+      <label>Epoch (UTC)</label>
+      <span id="epoch">—</span>
+      <button id="btn-now" title="Jump to the current date">NOW</button>
+    </div>
+
+    <div class="group">
+      <label for="scenario">Scenario</label>
+      <select id="scenario"></select>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="group">
+      <span id="gravity-chip" title="Release the planets from their ephemeris rails and let everything pull on everything">Gravity: rails</span>
+      <button id="btn-theme" class="icon" title="Cycle colour theme (T)">◐</button>
+      <span id="theme-label" class="theme-label">Aero Night</span>
+      <button id="btn-help" class="icon" title="Help">?</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <div id="stage">
+      <canvas id="view"></canvas>
+      <div id="hover-chip"><span id="hover-name"></span><span id="hover-info"></span></div>
+      <div id="toasts"></div>
+    </div>
+
+    <aside id="inspector">
+      <nav class="tabs">
+        <button id="tab-inspect" class="on">Inspect</button>
+        <button id="tab-create">Create</button>
+        <button id="tab-library">Library</button>
+      </nav>
+
+      <section class="panel" id="panel-inspect">
+        <div id="insp-empty">
+          <span class="big">◍</span>
+          Click a body in the sky — or double-click to follow it.<br>
+          Nothing selected yet.
+        </div>
+        <div id="insp-body" style="display:none">
+          <div id="insp-head">
+            <span id="insp-dot"></span>
+            <h2 id="insp-name">—</h2>
+          </div>
+          <span id="insp-kind">—</span>
+
+          <div class="facts">
+            <div class="fact"><small>Distance from star</small><b id="insp-dist">—</b></div>
+            <div class="fact"><small>Orbital period</small><b id="insp-period">—</b></div>
+            <div class="fact"><small>Speed</small><b id="insp-speed">—</b></div>
+            <div class="fact"><small>Radius</small><b id="insp-radius">—</b></div>
+            <div class="fact"><small>Mass</small><b id="insp-mass">—</b></div>
+            <div class="fact"><small>Rotation</small><b id="insp-rot">—</b></div>
+          </div>
+
+          <div class="actions">
+            <button id="btn-focus">◎ Focus</button>
+            <button id="btn-follow">👁 Follow</button>
+            <button id="btn-release">⛓ Release to gravity</button>
+            <button id="btn-remove" class="danger">🗑 Remove</button>
+          </div>
+
+          <p id="insp-desc"></p>
+          <div id="insp-extra"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-create" style="display:none">
+        <div class="ctl">
+          <div class="row"><label>Body type</label></div>
+          <div id="type-grid"></div>
+        </div>
+
+        <div class="tworow">
+          <div class="field">
+            <label for="c-name">Name</label>
+            <input type="text" id="c-name" placeholder="auto" maxlength="24" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="c-color">Colour</label>
+            <input type="color" id="c-color" value="#5f9fe8">
+          </div>
+        </div>
+
+        <div class="ctl">
+          <div class="row"><label for="c-mass">Mass</label><output id="c-mass-out">1.00 Earth</output></div>
+          <input type="range" id="c-mass" min="-7" max="7" step="0.001" value="0">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="c-radius">Radius</label><output id="c-radius-out">6,371 km</output></div>
+          <input type="range" id="c-radius" min="1" max="6.5" step="0.001" value="3.8">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="c-dist">Orbit radius</label><output id="c-dist-out">1.50 AU</output></div>
+          <input type="range" id="c-dist" min="-1.3" max="2" step="0.001" value="0.176">
+        </div>
+
+        <div class="tworow">
+          <div class="field">
+            <label for="c-dir">Direction</label>
+            <select id="c-dir">
+              <option value="pro">Prograde</option>
+              <option value="retro">Retrograde</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="c-vel">Launch speed</label>
+            <select id="c-vel">
+              <option value="0.6">0.6 × circular</option>
+              <option value="0.85">0.85 ×</option>
+              <option value="1" selected>Circular</option>
+              <option value="1.2">1.2 ×</option>
+              <option value="1.414">Escape</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="c-ring"> Give it rings</label>
+        </div>
+
+        <button id="btn-add" class="primary">＋ Add to sandbox</button>
+        <p class="hint">The new body is integrated live under gravity while the planets stay on their rails.</p>
+
+        <div class="ctl">
+          <div class="row"><label>Templates</label></div>
+          <div id="parts-list"></div>
+        </div>
+
+        <button id="btn-place">✛ Place by drag</button>
+        <p class="hint">Drag in the sky: press to set the position, drag to aim the velocity, release to launch.</p>
+      </section>
+
+      <section class="panel" id="panel-library" style="display:none">
+        <span id="library-current">—</span>
+        <div id="preset-grid"></div>
+        <div class="lib-actions">
+          <button id="btn-export">⭳ Export scenario</button>
+          <button id="btn-import">⭱ Import…</button>
+        </div>
+        <input type="file" id="file-import" accept=".json,application/json" style="display:none">
+        <p class="lib-note">Scenarios are plain <code>.json</code> — share them like the desktop app's <code>.sims</code> files.</p>
+      </section>
+    </aside>
+  </div>
+
+  <footer id="statusbar">
+    <span id="status-count">0 bodies</span>
+    <span id="status-mode">ephemeris rails</span>
+    <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · C create · L library</span>
+    <span class="right"><span id="status-fps">60 fps</span><span id="status-size">—</span></span>
+  </footer>
+
+</div>
+
+<div id="help">
+  <div class="card">
+    <h2>Controls</h2>
+    <table>
+      <tr><td>Space</td><td>play / pause the simulation</td></tr>
+      <tr><td>drag</td><td>pan the view</td></tr>
+      <tr><td>wheel, +/−</td><td>zoom toward the cursor</td></tr>
+      <tr><td>click</td><td>select a body</td></tr>
+      <tr><td>double-click</td><td>select and follow a body</td></tr>
+      <tr><td>F</td><td>focus the selected body</td></tr>
+      <tr><td>T / F3</td><td>cycle the colour theme</td></tr>
+      <tr><td>C / L</td><td>open the Create / Library tab</td></tr>
+      <tr><td>Delete</td><td>remove the selected body</td></tr>
+      <tr><td>Gravity chip</td><td>release every planet into live N-body gravity</td></tr>
+    </table>
+    <div class="foot"><button id="help-close" class="primary">Close</button></div>
+  </div>
+</div>
+
+<script>
+/* Solar System Sandbox v1.0.0 — single-file standalone build.
+ * Open in any browser; everything (styles, data, engine, UI) is inline. */
+'use strict';
+/* Solar System Sandbox — static data.
+ *
+ * Planetary positions come from JPL's "Approximate Positions of the Major
+ * Planets" — Keplerian elements referenced to the J2000 ecliptic with linear
+ * rates per Julian century (valid 1800–2050 AD).  Moons use simple circular
+ * orbits around their parent; they are decoration at solar-system zoom and
+ * honest enough when you follow a planet.
+ */
+
+const J2000_JD = 2451545.0;
+const DAY_MS = 86400000;
+const MSUN_KG = 1.98892e30;
+const MEARTH_KG = 5.9722e24;
+const MSUN_IN_MEARTH = MSUN_KG / MEARTH_KG;
+const AU_KM = 1.495978707e8;
+const K2 = 2.959122082855911e-4;   // (Gaussian gravitational constant)^2, AU^3/day^2/Msun
+
+/* ------------------------------------------------- JPL Keplerian elements -- */
+/* a [AU, AU/cy], e, I [deg], L [deg], varpi (longitude of perihelion), Omega
+ * (longitude of ascending node). */
+const PLANET_ELEMENTS = {
+  mercury: { a: [0.38709927, 0.00000037], e: [0.20563593, 0.00001906], I: [7.00497902, -0.00594749], L: [252.25032350, 149472.67411175], w: [77.45779628, 0.16047689], O: [48.33076593, -0.12534081] },
+  venus:   { a: [0.72333566, 0.00000390], e: [0.00677672, -0.00004107], I: [3.39467605, -0.00078890], L: [181.97909950, 58517.81538729], w: [131.60246718, 0.00268329], O: [76.67984255, -0.27769418] },
+  earth:   { a: [1.00000261, 0.00000562], e: [0.01671123, -0.00004392], I: [-0.00001531, -0.01294668], L: [100.46457166, 35999.37244981], w: [102.93768193, 0.32327364], O: [0.0, 0.0] },
+  mars:    { a: [1.52371034, 0.00001847], e: [0.09339410, 0.00007882], I: [1.84969142, -0.00813131], L: [-4.55343205, 19140.30268499], w: [-23.94362959, 0.44441088], O: [49.55953891, -0.29257343] },
+  jupiter: { a: [5.20288700, -0.00011607], e: [0.04838624, -0.00013253], I: [1.30439695, -0.00183714], L: [34.39644051, 3034.74612775], w: [14.72847983, 0.21252668], O: [100.47390909, 0.20469106] },
+  saturn:  { a: [9.53667594, -0.00125060], e: [0.05386179, -0.00050991], I: [2.48599187, 0.00193609], L: [49.95424423, 1222.49362201], w: [92.59887831, -0.41897216], O: [113.66242448, -0.28867794] },
+  uranus:  { a: [19.18916464, -0.00196176], e: [0.04725744, -0.00004397], I: [0.77263783, -0.00242939], L: [313.23810451, 428.48202785], w: [170.95427630, 0.40805281], O: [74.01692503, 0.04240589] },
+  neptune: { a: [30.06992276, 0.00026291], e: [0.00859048, 0.00005105], I: [1.77004347, 0.00035372], L: [-55.12002969, 218.45945325], w: [44.96476227, -0.32241464], O: [131.78422574, -0.00508664] },
+  pluto:   { a: [39.48211675, -0.00031596], e: [0.24882730, 0.00005170], I: [17.14001206, 0.00004818], L: [238.92903833, 145.20780515], w: [224.06891629, -0.04062942], O: [110.30393684, -0.01183482] },
+};
+
+/* ------------------------------------------------------------ body facts -- */
+
+const CATALOG = [
+  {
+    key: 'sun', name: 'Sun', kind: 'star',
+    radiusKm: 696000, massKg: MSUN_KG, color: '#ffcf6e', glow: '#ffe9b8',
+    desc: 'A G2V main-sequence star holding 99.86% of the mass of the system. Every orbit below is a compromise with its gravity.',
+    extra: [['Spectral type', 'G2V'], ['Surface', '5,772 K'], ['Age', '4.6 billion years']],
+  },
+  {
+    key: 'mercury', name: 'Mercury', kind: 'planet', elem: 'mercury',
+    radiusKm: 2439.7, massKg: 3.3011e23, color: '#a89e93', period: '88.0 d',
+    desc: 'A cratered iron ball on the fastest orbit of all — the Roman messenger god, appropriately.',
+    extra: [['Day length', '58.6 d'], ['Moons', '0'], ['Atmosphere', 'trace']],
+  },
+  {
+    key: 'venus', name: 'Venus', kind: 'planet', elem: 'venus',
+    radiusKm: 6051.8, massKg: 4.8675e24, color: '#e6c68a', period: '224.7 d',
+    desc: 'Earth\'s evil twin: same size, runaway greenhouse, 92-bar CO2 air and sulphuric-acid clouds.',
+    extra: [['Day length', '243 d (retro)'], ['Moons', '0'], ['Surface', '464 °C']],
+  },
+  {
+    key: 'earth', name: 'Earth', kind: 'planet', elem: 'earth',
+    radiusKm: 6371, massKg: 5.9722e24, color: '#5f9fe8', period: '1.00 y',
+    desc: 'The only world known to carry liquid-water oceans — and the people reading this page.',
+    extra: [['Day length', '23 h 56 m'], ['Moons', '1'], ['Atmosphere', 'N2 / O2']],
+  },
+  {
+    key: 'moon', name: 'Moon', kind: 'moon', parent: 'earth',
+    aAU: 0.002570, periodDays: 27.321661, e: 0.0549, phase0: 1.35,
+    radiusKm: 1737.4, massKg: 7.342e22, color: '#c9d2dc', period: '27.3 d',
+    desc: 'Earth\'s companion, locked with one face turned home. Its tugs raise the ocean tides.',
+    extra: [['Diameter', '3,475 km'], ['Orbit', '384,400 km']],
+  },
+  {
+    key: 'mars', name: 'Mars', kind: 'planet', elem: 'mars',
+    radiusKm: 3389.5, massKg: 6.4171e23, color: '#d97e56', period: '1.88 y',
+    desc: 'A cold desert world with the solar system\'s tallest volcano and a buried ocean\'s worth of ice.',
+    extra: [['Day length', '24 h 37 m'], ['Moons', '2'], ['Gravity', '0.38 g']],
+  },
+  {
+    key: 'jupiter', name: 'Jupiter', kind: 'planet', elem: 'jupiter',
+    radiusKm: 69911, massKg: 1.8982e27, color: '#d9b088', period: '11.86 y',
+    desc: 'More massive than every other planet combined; its moons are a miniature planetary system.',
+    extra: [['Day length', '9 h 56 m'], ['Moons', '95 known'], ['Great Red Spot', 'rages 350+ yrs']],
+  },
+  {
+    key: 'io', name: 'Io', kind: 'moon', parent: 'jupiter',
+    aAU: 0.002819, periodDays: 1.769138, e: 0.004, phase0: 0.6,
+    radiusKm: 1821.6, massKg: 8.9319e22, color: '#ddc86a', period: '1.77 d',
+    desc: 'The most volcanic body known, kneaded by Jupiter\'s tides.',
+  },
+  {
+    key: 'europa', name: 'Europa', kind: 'moon', parent: 'jupiter',
+    aAU: 0.004486, periodDays: 3.551181, e: 0.009, phase0: 2.4,
+    radiusKm: 1560.8, massKg: 4.7998e22, color: '#cfd8d6', period: '3.55 d',
+    desc: 'An ice shell over a global salt-water ocean — a prime candidate for life.',
+  },
+  {
+    key: 'ganymede', name: 'Ganymede', kind: 'moon', parent: 'jupiter',
+    aAU: 0.007155, periodDays: 7.154553, e: 0.001, phase0: 4.1,
+    radiusKm: 2634.1, massKg: 1.4819e23, color: '#b7a88f', period: '7.15 d',
+    desc: 'The largest moon in the solar system — bigger than Mercury, with its own magnetic field.',
+  },
+  {
+    key: 'callisto', name: 'Callisto', kind: 'moon', parent: 'jupiter',
+    aAU: 0.012586, periodDays: 16.689017, e: 0.007, phase0: 5.5,
+    radiusKm: 2410.3, massKg: 1.0759e23, color: '#8f8674', period: '16.69 d',
+    desc: 'The most heavily cratered surface known; a quiet witness to four billion years.',
+  },
+  {
+    key: 'saturn', name: 'Saturn', kind: 'planet', elem: 'saturn', ring: true,
+    radiusKm: 58232, massKg: 5.6834e26, color: '#e0cb96', period: '29.45 y',
+    desc: 'The ringed giant: a hydrogen world lighter than water, wearing a halo of ice.',
+    extra: [['Day length', '10 h 33 m'], ['Moons', '146 known'], ['Rings', '280,000 km wide']],
+  },
+  {
+    key: 'titan', name: 'Titan', kind: 'moon', parent: 'saturn',
+    aAU: 0.008168, periodDays: 15.945421, e: 0.029, phase0: 1.9,
+    radiusKm: 2574.7, massKg: 1.3452e23, color: '#d8b268', period: '15.95 d',
+    desc: 'A moon with rivers and seas — of liquid methane under an orange nitrogen sky.',
+  },
+  {
+    key: 'uranus', name: 'Uranus', kind: 'planet', elem: 'uranus',
+    radiusKm: 25362, massKg: 8.6810e25, color: '#9ed6da', period: '84.02 y',
+    desc: 'The tipped-over ice giant: it rolls around the Sun on its side, seasons forty years long.',
+    extra: [['Axial tilt', '97.8°'], ['Moons', '28 known']],
+  },
+  {
+    key: 'neptune', name: 'Neptune', kind: 'planet', elem: 'neptune',
+    radiusKm: 24622, massKg: 1.02413e26, color: '#6f8fe8', period: '164.8 y',
+    desc: 'The windiest world — supersonic storms in a deep blue methane haze, found by mathematics before telescopes.',
+    extra: [['Winds', '2,100 km/h'], ['Moons', '16 known']],
+  },
+  {
+    key: 'triton', name: 'Triton', kind: 'moon', parent: 'neptune',
+    aAU: 0.002371, periodDays: -5.876854, e: 0.000, phase0: 3.0,
+    radiusKm: 1353.4, massKg: 2.1390e22, color: '#ccd8e6', period: '5.88 d (retro)',
+    desc: 'Neptune\'s great moon orbits backwards — a captured Kuiper Belt world with nitrogen geysers.',
+  },
+  {
+    key: 'pluto', name: 'Pluto', kind: 'dwarf', elem: 'pluto',
+    radiusKm: 1188.3, massKg: 1.303e22, color: '#cfc9bd', period: '248.0 y',
+    desc: 'A dwarf planet with a heart of nitrogen ice. Planet, memorialised by a state legislature.',
+    extra: [['Discovered', '1930'], ['Moons', '5']],
+  },
+];
+
+/* --------------------------------------------------------------- themes -- */
+/* Each theme drives both the CSS (via [data-theme]) and the canvas palette. */
+
+const THEMES = [
+  {
+    id: 'aero-night', name: 'Aero Night', desc: 'Windows 7 glass over deep space',
+    canvas: {
+      bgTop: '#060911', bgBottom: '#0d1626', vignette: 0.55,
+      nebula: ['rgba(52,32,96,0.30)', 'rgba(24,52,110,0.26)'],
+      star: '207,226,255', starCount: 240,
+      orbit: 'rgba(132,178,255,0.30)', rail: 'rgba(132,178,255,0.16)',
+      moonOrbit: 'rgba(150,190,240,0.35)', label: '#cfe0f8', faint: 'rgba(207,224,248,0.62)',
+      trail: 'rgba(140,196,255,', trailAlpha: 0.55, hover: '#8cc4ff', select: '#8cc4ff',
+      scale: 'rgba(180,205,240,0.8)',
+    },
+  },
+  {
+    id: 'aero-day', name: 'Aero Day', desc: 'light glass, blueprint chart',
+    canvas: {
+      bgTop: '#eef4fc', bgBottom: '#ccd9ee', vignette: 0,
+      nebula: [], star: '60,90,150', starCount: 0,
+      orbit: 'rgba(28,64,128,0.40)', rail: 'rgba(28,64,128,0.18)',
+      moonOrbit: 'rgba(28,64,128,0.35)', label: '#1c2c48', faint: 'rgba(28,44,72,0.65)',
+      trail: 'rgba(34,86,164,', trailAlpha: 0.6, hover: '#2256a4', select: '#2256a4',
+      scale: 'rgba(20,40,80,0.75)', flat: true,
+    },
+  },
+  {
+    id: 'luna', name: 'Luna Blue', desc: 'XP-era blue chrome, cream panels',
+    canvas: {
+      bgTop: '#0a1c3c', bgBottom: '#123a6e', vignette: 0.4,
+      nebula: ['rgba(40,80,160,0.28)'],
+      star: '235,240,250', starCount: 200,
+      orbit: 'rgba(190,214,255,0.32)', rail: 'rgba(190,214,255,0.15)',
+      moonOrbit: 'rgba(200,220,255,0.35)', label: '#f4f0e2', faint: 'rgba(244,240,226,0.6)',
+      trail: 'rgba(255,220,140,', trailAlpha: 0.5, hover: '#ffd982', select: '#ffd982',
+      scale: 'rgba(240,236,220,0.85)',
+    },
+  },
+  {
+    id: 'aurora', name: 'Aurora', desc: 'teal and violet over polar night',
+    canvas: {
+      bgTop: '#03151a', bgBottom: '#0a2430', vignette: 0.5,
+      nebula: ['rgba(28,120,110,0.30)', 'rgba(90,48,140,0.26)'],
+      star: '200,255,240', starCount: 260,
+      orbit: 'rgba(110,240,210,0.28)', rail: 'rgba(110,240,210,0.13)',
+      moonOrbit: 'rgba(140,250,220,0.35)', label: '#dcf8f0', faint: 'rgba(220,248,240,0.6)',
+      trail: 'rgba(62,230,192,', trailAlpha: 0.55, hover: '#3ee6c0', select: '#3ee6c0',
+      scale: 'rgba(190,245,230,0.8)',
+    },
+  },
+  {
+    id: 'high-contrast', name: 'High Contrast', desc: 'black, white and yellow',
+    canvas: {
+      bgTop: '#000000', bgBottom: '#000000', vignette: 0,
+      nebula: [], star: '255,255,255', starCount: 160,
+      orbit: 'rgba(255,255,255,0.55)', rail: 'rgba(255,255,255,0.30)',
+      moonOrbit: 'rgba(255,255,255,0.5)', label: '#ffffff', faint: 'rgba(255,255,255,0.75)',
+      trail: 'rgba(255,230,0,', trailAlpha: 0.8, hover: '#ffe600', select: '#ffe600',
+      scale: 'rgba(255,255,255,0.9)', flat: true,
+    },
+  },
+];
+
+/* ------------------------------------------------------- scenario presets -- */
+
+const PRESETS = [
+  {
+    id: 'solar', name: 'Solar System', icon: '☀',
+    desc: 'The Sun, eight planets, Pluto and seven major moons on their real ephemerides.',
+  },
+  {
+    id: 'inner', name: 'Inner System', icon: '☾',
+    desc: 'Mercury to Mars with the Moon — fast orbits, close-up action.',
+  },
+  {
+    id: 'giants', name: 'Jupiter & Saturn', icon: '♃',
+    desc: 'The two gas giants with their Galilean moons and Titan.',
+  },
+  {
+    id: 'binary', name: 'Binary Star', icon: '☀☀',
+    desc: 'Two suns waltzing around each other with three circumbinary worlds — live gravity.',
+  },
+  {
+    id: 'empty', name: 'Empty Sandbox', icon: '✦',
+    desc: 'A lone star. Build your own system with the Create tab.',
+  },
+];
+
+/* --------------------------------------------------- create-tab templates -- */
+
+const BODY_TYPES = [
+  { id: 'asteroid', label: 'Asteroid', massEarth: 1e-4, radiusKm: 120, color: '#b0aa9e', dfltDist: 1.8 },
+  { id: 'comet', label: 'Comet', massEarth: 1e-7, radiusKm: 12, color: '#bcd8e8', dfltDist: 4.5 },
+  { id: 'terrestrial', label: 'Terrestrial', massEarth: 1, radiusKm: 6371, color: '#5f9fe8', dfltDist: 1.5 },
+  { id: 'icegiant', label: 'Ice giant', massEarth: 14.5, radiusKm: 25362, color: '#9ed6da', dfltDist: 12 },
+  { id: 'gasgiant', label: 'Gas giant', massEarth: 318, radiusKm: 69911, color: '#d9b088', dfltDist: 6 },
+  { id: 'dwarf', label: 'Dwarf', massEarth: 0.0022, radiusKm: 1188, color: '#cfc9bd', dfltDist: 20 },
+  { id: 'star', label: 'Star', massEarth: 332946, radiusKm: 696000, color: '#ffb84e', dfltDist: 25 },
+  { id: 'blackhole', label: 'Black hole', massEarth: 3.6e6, radiusKm: 21, color: '#111318', dfltDist: 40 },
+];
+
+const PARTS = [
+  { name: 'Ocean World', type: 'terrestrial', massEarth: 1.3, radiusKm: 6900, color: '#3f9bd8',
+    desc: 'A temperate waterworld wrapped in white clouds.' },
+  { name: 'Ember', type: 'terrestrial', massEarth: 0.06, radiusKm: 2900, color: '#e06a4a',
+    desc: 'A molten rock hugging its star; rivers of lava on the day side.' },
+  { name: 'Ringed Ice Giant', type: 'icegiant', massEarth: 14.5, radiusKm: 25362, color: '#9ed6da', ring: true,
+    desc: 'A cold methane atmosphere girdled by narrow dark rings.' },
+  { name: 'Iron Heart', type: 'asteroid', massEarth: 8e-4, radiusKm: 260, color: '#9aa4ae',
+    desc: 'The exposed core of a shattered protoplanet.' },
+  { name: 'Wanderer', type: 'comet', massEarth: 2e-7, radiusKm: 14, color: '#bcd8e8',
+    desc: 'A long-period visitor that will grow a tail near the star.' },
+];
+
+/* ------------------------------------------------------------- utilities -- */
+
+function fmtNumber(v, unit, digits) {
+  const abs = Math.abs(v);
+  let s;
+  if (abs >= 1e6) s = (v / 1e6).toFixed(1) + 'M';
+  else if (abs >= 1e3) s = (v / 1e3).toFixed(abs >= 1e4 ? 0 : 1) + 'k';
+  else if (abs >= 100) s = v.toFixed(0);
+  else if (abs >= 10) s = v.toFixed(1);
+  else if (abs >= 1) s = v.toFixed(digits === undefined ? 2 : digits);
+  else if (abs >= 0.01) s = v.toFixed(3);
+  else if (abs === 0) s = '0';
+  else s = v.toExponential(1);
+  return unit ? s + ' ' + unit : s;
+}
+
+function fmtMassEarth(mEarth) {
+  if (mEarth >= 0.05) return fmtNumber(mEarth, 'Earth', 2);
+  return (mEarth >= 1e-4 ? mEarth.toFixed(4) : mEarth.toExponential(1)) + ' Earth';
+}
+
+</script>
+<script>
+/* Solar System Sandbox v1.0.0 — single-file standalone build.
+ * Open in any browser; everything (styles, data, engine, UI) is inline. */
+'use strict';
+/* Solar System Sandbox — simulation engine.
+ *
+ * Planets ride JPL's approximate ephemerides ("rails") until gravity is
+ * released or a body is created; from that moment the whole system runs as a
+ * symplectic velocity-Verlet N-body integration in AU / days / solar masses.
+ * Rails bodies still attract user bodies while they are on rails, so a new
+ * planet immediately feels the real, moving gravitational field.
+ */
+
+const DEG = Math.PI / 180;
+const TAU = Math.PI * 2;
+
+function nowJD() { return Date.now() / DAY_MS + 2440587.5; }
+
+function keplerSolve(M, e) {
+  let E = e < 0.8 ? M : Math.PI;
+  for (let i = 0; i < 12; i++) {
+    const dE = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+    E -= dE;
+    if (Math.abs(dE) < 1e-9) break;
+  }
+  return E;
+}
+
+/* Orbital-plane (xp, yp) -> ecliptic (x, y, z) via argument of perihelion w,
+ * inclination I and ascending node O (radians). */
+function orient(xp, yp, w, O, I) {
+  const cw = Math.cos(w), sw = Math.sin(w);
+  const cO = Math.cos(O), sO = Math.sin(O);
+  const cI = Math.cos(I), sI = Math.sin(I);
+  return [
+    (cw * cO - sw * sO * cI) * xp + (-sw * cO - cw * sO * cI) * yp,
+    (cw * sO + sw * cO * cI) * xp + (-sw * sO + cw * cO * cI) * yp,
+    (sw * sI) * xp + (cw * sI) * yp,
+  ];
+}
+
+/* Element set at Julian century T -> {a, e, I, w, O} in AU / radians. */
+function elementsAt(el, T) {
+  return {
+    a: el.a[0] + el.a[1] * T,
+    e: el.e[0] + el.e[1] * T,
+    I: (el.I[0] + el.I[1] * T) * DEG,
+    w: (el.w[0] + el.w[1] * T) * DEG,
+    O: (el.O[0] + el.O[1] * T) * DEG,
+    L: (el.L[0] + el.L[1] * T) * DEG,
+  };
+}
+
+/* Heliocentric ecliptic position of a rails planet at T (centuries past J2000). */
+function planetPosition(key, jd) {
+  const el = elementsAt(PLANET_ELEMENTS[key], (jd - J2000_JD) / 36525);
+  const M = el.L - el.w; // mean anomaly = mean longitude - longitude of perihelion
+  const E = keplerSolve(((M % TAU) + TAU) % TAU, el.e);
+  const xp = el.a * (Math.cos(E) - el.e);
+  const yp = el.a * Math.sqrt(1 - el.e * el.e) * Math.sin(E);
+  const p = orient(xp, yp, el.w - el.O, el.O, el.I); // w-arg = varpi - Omega
+  return { pos: p, elem: el };
+}
+
+/* Moon position relative to its parent: near-circular orbit in the ecliptic. */
+function moonOffset(m, jd) {
+  const tDays = jd - J2000_JD;
+  const ang = m.phase0 + TAU * tDays / m.periodDays;
+  const a = m.aAU * (1 - m.mEcc * Math.cos(ang));
+  return [a * Math.cos(ang), a * Math.sin(ang), 0];
+}
+
+/* ------------------------------------------------------------ Simulation -- */
+
+class Simulation {
+  constructor() {
+    this.bodies = [];        // all bodies, rails and dynamic
+    this.byId = new Map();
+    this.mode = 'rails';     // 'rails' | 'nbody'
+    this.jd = nowJD();
+    this.speed = 1;          // days of sim time per real second
+    this.paused = false;
+    this.nextId = 1;
+    this.events = [];        // {text} — merges, spawns; drained by the UI
+    this.onRailsCount = 0;
+  }
+
+  loadPreset(id) {
+    this.bodies = [];
+    this.byId.clear();
+    this.mode = 'rails';
+    this.jd = nowJD();
+    this.nextId = 1;
+    if (id === 'empty') {
+      this.addBody(this.makeFromCatalog('sun'));
+    } else if (id === 'inner') {
+      for (const k of ['sun', 'mercury', 'venus', 'earth', 'moon', 'mars'])
+        this.addBody(this.makeFromCatalog(k));
+    } else if (id === 'giants') {
+      for (const k of ['sun', 'jupiter', 'io', 'europa', 'ganymede', 'callisto', 'saturn', 'titan'])
+        this.addBody(this.makeFromCatalog(k));
+    } else if (id === 'binary') {
+      this.loadBinary();
+    } else {
+      for (const def of CATALOG) this.addBody(this.makeFromCatalog(def.key));
+    }
+  }
+
+  /* Two stars and three circumbinary planets, integrated from t=0. */
+  loadBinary() {
+    this.mode = 'nbody';
+    const m1 = 1.0, m2 = 0.6, d = 1.2;
+    const omega = Math.sqrt(K2 * (m1 + m2) / (d * d * d));
+    const r1 = d * m2 / (m1 + m2), r2 = d * m1 / (m1 + m2);
+    const a = this.addBody(Object.assign(this.makeFromCatalog('sun'), {
+      name: 'Sun A', massKg: m1 * MSUN_KG,
+      state: { p: [-r1, 0, 0], v: [0, omega * r1, 0] },
+    }));
+    this.addBody(Object.assign(this.makeFromCatalog('sun'), {
+      name: 'Sun B', massKg: m2 * MSUN_KG, color: '#ff9d5c', glow: '#ffd0a8',
+      state: { p: [r2, 0, 0], v: [0, -omega * r2, 0] },
+    }));
+    const put = (name, dist, massEarth, radiusKm, color, phase, kind) => {
+      const M = m1 + m2;
+      const v = Math.sqrt(K2 * M / dist);
+      this.addBody({
+        id: this.nextId++, name, kind: kind || 'terrestrial', catalog: null,
+        massKg: massEarth * MEARTH_KG, radiusKm, color,
+        state: {
+          p: [dist * Math.cos(phase), dist * Math.sin(phase), 0],
+          v: [-v * Math.sin(phase), v * Math.cos(phase), 0],
+        }, trail: [],
+      });
+    };
+    put('Aegir', 2.6, 0.9, 6300, '#5f9fe8', 0.4);
+    put('Brenn', 4.2, 0.4, 5200, '#d97e56', 2.6);
+    put('Cael', 6.8, 120, 46000, '#9ed6da', 4.9, 'icegiant');
+    return a;
+  }
+
+  makeFromCatalog(key) {
+    const def = CATALOG.find(c => c.key === key);
+    return {
+      id: this.nextId++, name: def.name, kind: def.kind, catalog: def.key,
+      elemKey: def.elem || null, parentKey: def.parent || null,
+      aAU: def.aAU || 0, periodDays: def.periodDays || 0, mEcc: def.e || 0, phase0: def.phase0 || 0,
+      massKg: def.massKg, radiusKm: def.radiusKm, color: def.color, ring: !!def.ring,
+      glow: def.glow || null, periodLabel: def.period || null,
+      pos: [0, 0, 0], state: null, trail: [],
+    };
+  }
+
+  addBody(b) {
+    this.bodies.push(b);
+    this.byId.set(b.id, b);
+    return b;
+  }
+
+  /* Create a custom body; if anything dynamic exists the system keeps running
+   * live, otherwise it switches to N-body for the newcomer alone. */
+  addCustom(o) {
+    // o: {name, kind, massEarth, radiusKm, color, ring, posAU:[x,y], velAUd:[vx,vy]}
+    const massKg = o.massEarth * MEARTH_KG;
+    const b = {
+      id: this.nextId++, name: o.name || this.suggestName(o.kind), kind: o.kind, catalog: null,
+      elemKey: null, parentKey: null, massKg, radiusKm: o.radiusKm, color: o.color,
+      ring: !!o.ring, glow: o.kind === 'star' ? '#ffe9b8' : (o.kind === 'blackhole' ? null : null),
+      periodLabel: null, pos: o.posAU, state: { p: o.posAU, v: o.velAUd }, trail: [],
+    };
+    this.addBody(b);
+    if (this.mode === 'rails') this.releaseToNBody();
+    this.events.push({ text: `${b.name} added to the sandbox` });
+    return b;
+  }
+
+  suggestName(kind) {
+    const used = new Set(this.bodies.map(b => b.name));
+    const pool = { asteroid: ['Ceres','Vesta','Pallas','Hygiea','Eunomia'], comet: ['Halley','Encke','Tempel','Swift','Borrelly'] }[kind] || [];
+    for (const n of pool) if (!used.has(n)) return n;
+    for (let i = 2; ; i++) { const n = `${kind[0].toUpperCase()}${kind.slice(1)}-${i}`; if (!used.has(n)) return n; }
+  }
+
+  /* Snapshot every rails body into a dynamic state (pos via ephemeris, vel by
+   * numeric differentiation), then integrate everything.  All positions are
+   * snapshotted BEFORE any state is assigned, so moons see their still-moving
+   * parent. */
+  releaseToNBody() {
+    if (this.mode === 'nbody') return;
+    const h = 0.02; // days
+    const snap = this.bodies.map(b => ({
+      b,
+      p0: this.bodyPos(b, this.jd),
+      p1: this.bodyPos(b, this.jd + h),
+    }));
+    for (const { b, p0, p1 } of snap) {
+      for (let i = 0; i < 3; i++) b.pos[i] = p0[i];
+      b.state = {
+        p: p0.slice(),
+        v: [(p1[0] - p0[0]) / h, (p1[1] - p0[1]) / h, (p1[2] - p0[2]) / h],
+      };
+      b.elemKey = null; // stay on the drawn rail, leave the real motion
+      b.parentKey = null;
+    }
+    this.mode = 'nbody';
+    this.events.push({ text: 'Gravity released — everything pulls on everything now' });
+  }
+
+  removeBody(id) {
+    const b = this.byId.get(id);
+    if (!b || b.catalog && b.kind === 'star' && this.bodies.filter(x => x.kind === 'star').length === 1) return null;
+    this.byId.delete(id);
+    this.bodies = this.bodies.filter(x => x.id !== id);
+    this.events.push({ text: `${b.name} removed` });
+    return b;
+  }
+
+  /* Current position of a body (fresh vector — safe to hold across calls). */
+  bodyPos(b, jd) { return this.bodyPosInto(b, jd, [0, 0, 0]); }
+
+  bodyPosInto(b, jd, out) {
+    if (b.state) {
+      out[0] = b.state.p[0]; out[1] = b.state.p[1]; out[2] = b.state.p[2];
+      return out;
+    }
+    if (b.parentKey) {
+      const parent = this.bodies.find(x => x.catalog === b.parentKey);
+      const off = moonOffset(b, jd);
+      const pp = parent ? this.bodyPos(parent, jd) : [0, 0, 0];
+      out[0] = pp[0] + off[0]; out[1] = pp[1] + off[1]; out[2] = pp[2] + off[2];
+      return out;
+    }
+    if (b.elemKey) {
+      const { pos } = planetPosition(b.elemKey, jd);
+      out[0] = pos[0]; out[1] = pos[1]; out[2] = pos[2];
+      return out;
+    }
+    out[0] = b.pos[0]; out[1] = b.pos[1]; out[2] = b.pos[2];
+    return out;
+  }
+
+  advance(dtSec) {
+    if (this.paused || dtSec <= 0) return;
+    const dDays = this.speed * dtSec;
+    const dynamic = this.bodies.some(b => b.state);
+    if (!dynamic) {
+      this.jd += dDays;
+      return;
+    }
+    // Substep so fast time-lapses stay stable around tight orbits.
+    const maxStep = 0.004;
+    const n = Math.min(600, Math.max(1, Math.ceil(Math.abs(dDays) / maxStep)));
+    const h = dDays / n;
+    for (let s = 0; s < n; s++) this.integrate(h);
+    this.jd += dDays;
+    for (const b of this.bodies) {
+      if (!b.state) continue;
+      b.trail.push(b.state.p[0], b.state.p[1]);
+      if (b.trail.length > 1400) b.trail.splice(0, b.trail.length - 1400);
+    }
+  }
+
+  /* Velocity Verlet; rails bodies act as moving gravitational sources. */
+  integrate(h) {
+    const bodies = this.bodies;
+    const dyn = [];
+    for (const b of bodies) if (b.state) dyn.push(b);
+    if (!dyn.length) { this.jd += h; return; }
+
+    // sources: masses that pull (everything except the moving body itself)
+    const src = [];
+    for (const b of bodies) {
+      if (b.state) continue;
+      src.push({ p: this.bodyPos(b, this.jd), m: b.massKg / MSUN_KG });
+    }
+    const G = K2;
+    const EPS2 = 1e-10; // ~1.5e-5 AU softening
+
+    const accelOf = (i) => {
+      const p = dyn[i].state.p;
+      let ax = 0, ay = 0, az = 0;
+      for (const s of src) {
+        const dx = s.p[0] - p[0], dy = s.p[1] - p[1], dz = s.p[2] - p[2];
+        const r2 = dx * dx + dy * dy + dz * dz + EPS2;
+        const f = G * s.m / (r2 * Math.sqrt(r2));
+        ax += f * dx; ay += f * dy; az += f * dz;
+      }
+      for (let j = 0; j < dyn.length; j++) {
+        if (j === i) continue;
+        const q = dyn[j].state.p;
+        const dx = q[0] - p[0], dy = q[1] - p[1], dz = q[2] - p[2];
+        const r2 = dx * dx + dy * dy + dz * dz + EPS2;
+        const f = G * (dyn[j].massKg / MSUN_KG) / (r2 * Math.sqrt(r2));
+        ax += f * dx; ay += f * dy; az += f * dz;
+      }
+      return [ax, ay, az];
+    };
+
+    // (re)use cached acceleration from the previous step when available
+    if (!dyn[0]._acc) for (const b of dyn) b._acc = [0, 0, 0];
+    for (let i = 0; i < dyn.length; i++) {
+      const st = dyn[i].state;
+      st.p[0] += st.v[0] * h + 0.5 * dyn[i]._acc[0] * h * h;
+      st.p[1] += st.v[1] * h + 0.5 * dyn[i]._acc[1] * h * h;
+      st.p[2] += st.v[2] * h + 0.5 * dyn[i]._acc[2] * h * h;
+    }
+    const newAcc = new Array(dyn.length);
+    for (let i = 0; i < dyn.length; i++) newAcc[i] = accelOf(i);
+    for (let i = 0; i < dyn.length; i++) {
+      const st = dyn[i].state;
+      st.v[0] += 0.5 * (dyn[i]._acc[0] + newAcc[i][0]) * h;
+      st.v[1] += 0.5 * (dyn[i]._acc[1] + newAcc[i][1]) * h;
+      st.v[2] += 0.5 * (dyn[i]._acc[2] + newAcc[i][2]) * h;
+      dyn[i]._acc = newAcc[i];
+    }
+    this.jd += h;
+    // collisions every substep: fast bodies must not tunnel through a star,
+    // and dynamic bodies can be captured by bodies still on their rails
+    this.checkCollisions(dyn);
+  }
+
+  /* Merge any overlapping bodies.  Dynamic bodies collide with everything:
+   * each other, and bodies still on their ephemeris rails. */
+  checkCollisions(dyn) {
+    for (let i = 0; i < dyn.length; i++) {
+      const a = dyn[i];
+      if (!this.byId.has(a.id)) continue;
+      for (let j = 0; j < this.bodies.length; j++) {
+        const b = this.bodies[j];
+        if (b === a || !this.byId.has(b.id)) continue;
+        const pb = b.state ? b.state.p : this.bodyPos(b, this.jd);
+        const dx = a.state.p[0] - pb[0], dy = a.state.p[1] - pb[1];
+        if (!isFinite(dx) || !isFinite(dy)) continue;
+        const rSum = (a.radiusKm + b.radiusKm) / AU_KM;
+        if (dx * dx + dy * dy > rSum * rSum) continue;
+        const big = b.massKg >= a.massKg ? b : a;
+        const small = big === b ? a : b;
+        this.absorbInto(big, small, dyn);
+        if (small === a) break;
+      }
+    }
+  }
+
+  absorbInto(big, small, dynList) {
+    const mt = big.massKg + small.massKg;
+    if (big.state && small.state) {
+      for (let k = 0; k < 3; k++) {
+        big.state.v[k] = (big.state.v[k] * big.massKg + small.state.v[k] * small.massKg) / mt;
+        big.state.p[k] = (big.state.p[k] * big.massKg + small.state.p[k] * small.massKg) / mt;
+      }
+    }
+    big.massKg = mt;
+    if (small.radiusKm > big.radiusKm * 0.4) {
+      big.radiusKm = Math.cbrt(big.radiusKm ** 3 + small.radiusKm ** 3);
+    }
+    this.bodies = this.bodies.filter(x => x !== small);
+    this.byId.delete(small.id);
+    if (dynList) {
+      const idx = dynList.indexOf(small);
+      if (idx >= 0) dynList.splice(idx, 1);
+    }
+    this.events.push({ text: `${small.name} absorbed by ${big.name}`, kind: 'merge' });
+  }
+
+
+  /* Osculating orbital elements of a dynamic body w.r.t. the dominant mass. */
+  osculating(b) {
+    if (!b.state) return null;
+    let cx = 0, cy = 0, mt = 0;
+    for (const o of this.bodies) {
+      if (o === b) continue;
+      if (o.kind !== 'star' && o.massKg <= b.massKg * 20) continue;
+      const p = o.state ? o.state.p : this.bodyPos(o, this.jd);
+      cx += p[0] * o.massKg; cy += p[1] * o.massKg; mt += o.massKg;
+    }
+    if (mt === 0) return null;
+    cx /= mt; cy /= mt;
+    const px = b.state.p[0] - cx, py = b.state.p[1] - cy;
+    const vx = b.state.v[0], vy = b.state.v[1];
+    const r = Math.hypot(px, py);
+    const v2 = vx * vx + vy * vy;
+    const mu = K2 * (mt / MSUN_KG);
+    if (r === 0 || mu === 0) return null;
+    const aInv = 2 / r - v2 / mu;
+    if (aInv <= 0) return { a: Infinity, periodDays: Infinity };
+    const a = 1 / aInv;
+    return { a, periodDays: TAU * Math.sqrt(a * a * a / mu) };
+  }
+
+  drainEvents() {
+    const e = this.events;
+    this.events = [];
+    return e;
+  }
+
+  serialize() {
+    // snapshot as a fully dynamic scenario at the current epoch
+    const h = 0.02;
+    const out = [];
+    for (const b of this.bodies) {
+      const p = this.bodyPos(b, this.jd).slice();
+      let v = [0, 0, 0];
+      if (b.state) v = b.state.v.slice();
+      else {
+        const p1 = this.bodyPos(b, this.jd + h);
+        v = [(p1[0] - p[0]) / h, (p1[1] - p[1]) / h, 0];
+      }
+      out.push({
+        name: b.name, kind: b.kind, massKg: b.massKg, radiusKm: b.radiusKm,
+        color: b.color, ring: b.ring || false, p, v,
+      });
+    }
+    return { app: 'solar-system-sandbox', version: 1, epochJD: this.jd, bodies: out };
+  }
+
+  loadScenario(data) {
+    if (!data || data.app !== 'solar-system-sandbox' || !Array.isArray(data.bodies)) return false;
+    this.bodies = [];
+    this.byId.clear();
+    this.mode = 'nbody';
+    this.jd = data.epochJD || nowJD();
+    this.nextId = 1;
+    for (const d of data.bodies) {
+      this.addBody({
+        id: this.nextId++, name: String(d.name || 'Body'), kind: d.kind || 'terrestrial', catalog: null,
+        elemKey: null, parentKey: null, massKg: +d.massKg || MEARTH_KG, radiusKm: +d.radiusKm || 6371,
+        color: d.color || '#b0aa9e', ring: !!d.ring, glow: d.kind === 'star' ? '#ffe9b8' : null,
+        periodLabel: null, pos: d.p.slice(), state: { p: d.p.slice(), v: d.v.slice() }, trail: [],
+      });
+    }
+    return true;
+  }
+}
+
+</script>
+<script>
+/* Solar System Sandbox v1.0.0 — single-file standalone build.
+ * Open in any browser; everything (styles, data, engine, UI) is inline. */
+'use strict';
+/* Solar System Sandbox — renderer and interface. */
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const canvas = $('view');
+  const ctx = canvas.getContext('2d');
+
+  const state = {
+    sim: new Simulation(),
+    cam: { x: 0, y: 0, ppAU: 46, followId: null },
+    selectedId: null,
+    hoverId: null,
+    theme: THEMES[0],
+    mouse: { x: 0, y: 0, down: false, panning: false, lastX: 0, lastY: 0, button: 0 },
+    placeMode: false,
+    drag: null,           // {ax,ay} world coords while dragging a spawn vector
+    fps: 60,
+    tab: 'inspect',
+    starfield: null,
+    starfieldKey: '',
+  };
+
+  /* ------------------------------------------------------------ helpers */
+
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+  function hexRGB(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  function shade(hex, f) {
+    const [r, g, b] = hexRGB(hex);
+    const c = (v) => clamp(Math.round(f > 0 ? v + (255 - v) * f : v * (1 + f)), 0, 255);
+    return `rgb(${c(r)},${c(g)},${c(b)})`;
+  }
+  function rgba(hex, a) {
+    const [r, g, b] = hexRGB(hex);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+
+  function jdToDate(jd) { return new Date((jd - 2440587.5) * DAY_MS); }
+  const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+  function fmtDate(jd) {
+    const d = jdToDate(jd);
+    const p = (n, w) => String(n).padStart(w, '0');
+    return `${p(d.getUTCDate(),2)} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}  ${p(d.getUTCHours(),2)}:${p(d.getUTCMinutes(),2)}`;
+  }
+
+  function fmtSpeed(daysPerSec) {
+    const v = daysPerSec;
+    if (v < 1 / 24) return (v * 24 * 60).toFixed(0) + ' min/s';
+    if (v < 1) return (v * 24).toFixed(1) + ' h/s';
+    if (v < 45) return v.toFixed(2) + ' day/s';
+    if (v < 365) return (v / 30.44).toFixed(1) + ' mo/s';
+    return (v / 365.25).toFixed(2) + ' y/s';
+  }
+
+  function fmtPeriod(days) {
+    if (!isFinite(days)) return 'escape';
+    if (days < 400) return days.toFixed(days < 10 ? 2 : 1) + ' d';
+    return (days / 365.25).toFixed(2) + ' y';
+  }
+
+  /* ---------------------------------------------------------- starfield */
+
+  function buildStarfield(w, h, theme) {
+    const key = `${w}x${h}:${theme.id}`;
+    if (state.starfieldKey === key) return state.starfield;
+    const off = document.createElement('canvas');
+    off.width = w; off.height = h;
+    const c = off.getContext('2d');
+    // nebula washes
+    for (let i = 0; i < theme.canvas.nebula.length; i++) {
+      const col = theme.canvas.nebula[i];
+      const cx = w * (0.18 + 0.62 * i), cy = h * (i % 2 ? 0.72 : 0.2);
+      const g = c.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.55);
+      g.addColorStop(0, col);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+    }
+    // stars
+    let rng = 20261018;
+    const rnd = () => (rng = (rng * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    for (let i = 0; i < theme.canvas.starCount; i++) {
+      const x = rnd() * w, y = rnd() * h;
+      const r = rnd() < 0.92 ? 0.6 + rnd() * 0.7 : 1.3 + rnd() * 1.0;
+      const a = 0.18 + rnd() * (r > 1.2 ? 0.65 : 0.45);
+      c.fillStyle = `rgba(${theme.canvas.star},${a})`;
+      c.beginPath(); c.arc(x, y, r, 0, TAU); c.fill();
+    }
+    state.starfield = off;
+    state.starfieldKey = key;
+    return off;
+  }
+
+  /* -------------------------------------------------------- coordinates */
+
+  function worldToScreen(x, y) {
+    return [
+      (x - state.cam.x) * state.cam.ppAU + canvas.clientWidth / 2,
+      -(y - state.cam.y) * state.cam.ppAU + canvas.clientHeight / 2,
+    ];
+  }
+  function screenToWorld(sx, sy) {
+    return [
+      (sx - canvas.clientWidth / 2) / state.cam.ppAU + state.cam.x,
+      -(sy - canvas.clientHeight / 2) / state.cam.ppAU + state.cam.y,
+    ];
+  }
+
+  function bodyScreenRadius(b) {
+    const real = (b.radiusKm / AU_KM) * state.cam.ppAU;
+    const visual = 2.1 + 3.4 * Math.log10(1 + b.radiusKm / 2000);
+    if (state.theme.canvas.flat) return Math.max(real, b.kind === 'star' ? 9 : 3);
+    return clamp(Math.max(real, visual), 1.6, 90);
+  }
+
+  /* ------------------------------------------------------------ picking */
+
+  function pickBody(sx, sy) {
+    let best = null, bestD = 14;
+    for (const b of state.sim.bodies) {
+      const [x, y] = worldToScreen(...state.sim.bodyPos(b, state.sim.jd));
+      const d = Math.hypot(x - sx, y - sy);
+      const r = Math.max(bodyScreenRadius(b) + 4, 9);
+      if (d < Math.max(r, 9) && d < bestD + r - 9) { best = b; bestD = d; }
+    }
+    return best;
+  }
+
+  /* ------------------------------------------------------------- render */
+
+  function drawOrbitFor(b) {
+    const T = (state.sim.jd - J2000_JD) / 36525;
+    const pal = state.theme.canvas;
+    ctx.beginPath();
+    if (b.parentKey) {
+      const parent = state.sim.bodies.find(x => x.catalog === b.parentKey);
+      if (!parent) return;
+      const [px, py] = worldToScreen(...state.sim.bodyPos(parent, state.sim.jd));
+      const r = b.aAU * state.cam.ppAU;
+      if (r * 2 > 6) { ctx.strokeStyle = pal.moonOrbit; ctx.arc(px, py, r, 0, TAU); ctx.stroke(); }
+      return;
+    }
+    if (!b.elemKey && !b.railKey) return;
+    const el = elementsAt(PLANET_ELEMENTS[b.elemKey || b.railKey], T);
+    const cw = Math.cos(el.w - el.O), sw = Math.sin(el.w - el.O);
+    const cO = Math.cos(el.O), sO = Math.sin(el.O);
+    const cI = Math.cos(el.I), sI = Math.sin(el.I);
+    const bx = Math.sqrt(1 - el.e * el.e);
+    for (let i = 0; i <= 128; i++) {
+      const E = (i / 128) * TAU;
+      const xp = el.a * (Math.cos(E) - el.e), yp = el.a * bx * Math.sin(E);
+      const x = (cw * cO - sw * sO * cI) * xp + (-sw * cO - cw * sO * cI) * yp;
+      const y = (cw * sO + sw * cO * cI) * xp + (-sw * sO + cw * cO * cI) * yp;
+      const [sx, sy] = worldToScreen(x, y);
+      if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+    ctx.strokeStyle = b.elemKey ? pal.orbit : pal.rail;
+    ctx.stroke();
+  }
+
+  function drawTrail(b) {
+    const t = b.trail;
+    if (!t || t.length < 6) return;
+    const pal = state.theme.canvas;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i < t.length; i += 2) {
+      const [sx, sy] = worldToScreen(t[i], t[i + 1]);
+      if (!started) { ctx.moveTo(sx, sy); started = true; } else ctx.lineTo(sx, sy);
+    }
+    const [lx, ly] = worldToScreen(b.state.p[0], b.state.p[1]);
+    ctx.lineTo(lx, ly);
+    ctx.strokeStyle = pal.trail + pal.trailAlpha + ')';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.lineWidth = 1;
+  }
+
+  function drawBody(b, sx, sy, r) {
+    const pal = state.theme.canvas;
+    const flat = pal.flat;
+
+    if (b.kind === 'blackhole') {
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(120,140,255,0.35)';
+      ctx.beginPath(); ctx.arc(sx, sy, r * 2.2, 0, TAU); ctx.stroke();
+      return;
+    }
+    if (b.kind === 'star' || b.glow) {
+      const gr = r * (b.kind === 'star' ? 7 : 4);
+      const g = ctx.createRadialGradient(sx, sy, r * 0.3, sx, sy, gr);
+      g.addColorStop(0, rgba(b.glow || '#ffe9b8', 0.85));
+      g.addColorStop(1, 'rgba(255,220,150,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(sx, sy, gr, 0, TAU); ctx.fill();
+    }
+    if (b.kind === 'comet') {
+      const [sunX, sunY] = worldToScreen(0, 0);
+      const dx = sx - sunX, dy = sy - sunY;
+      const dd = Math.hypot(dx, dy) || 1;
+      const tailLen = clamp(46 * Math.pow(1.2 / (state.cam.ppAU > 0 ? dd / state.cam.ppAU : 5), 1.2), 0, 64);
+      if (tailLen > 4) {
+        const tx = sx + dx / dd * tailLen, ty = sy + dy / dd * tailLen;
+        const g = ctx.createLinearGradient(sx, sy, tx, ty);
+        g.addColorStop(0, rgba(b.color, 0.5));
+        g.addColorStop(1, rgba(b.color, 0));
+        ctx.strokeStyle = g;
+        ctx.lineWidth = r * 1.6;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(tx, ty); ctx.stroke();
+        ctx.lineWidth = 1;
+      }
+    }
+    if (flat) {
+      ctx.fillStyle = b.color;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(128,128,128,0.6)';
+      ctx.stroke();
+    } else {
+      // day-side highlight toward the (nearest) star
+      const star = nearestStar(b);
+      let hx = sx - r * 0.35, hy = sy - r * 0.35;
+      if (star) {
+        const [stx, sty] = worldToScreen(...state.sim.bodyPos(star, state.sim.jd));
+        const dx = stx - sx, dy = sty - sy, dd = Math.hypot(dx, dy) || 1;
+        hx = sx + dx / dd * r * 0.45; hy = sy + dy / dd * r * 0.45;
+      }
+      const g = ctx.createRadialGradient(hx, hy, r * 0.1, sx, sy, r * 1.25);
+      g.addColorStop(0, shade(b.color, 0.35));
+      g.addColorStop(0.62, b.color);
+      g.addColorStop(1, shade(b.color, -0.62));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, TAU); ctx.fill();
+    }
+    if (b.ring) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.rotate(-0.45);
+      ctx.scale(1, 0.42);
+      ctx.strokeStyle = flat ? 'rgba(255,255,255,0.8)' : rgba(b.color, 0.65);
+      ctx.lineWidth = Math.max(1.5, r * 0.42);
+      ctx.beginPath(); ctx.arc(0, 0, r * 1.75, 0, TAU); ctx.stroke();
+      ctx.lineWidth = Math.max(0.8, r * 0.14);
+      ctx.strokeStyle = flat ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.45)';
+      ctx.beginPath(); ctx.arc(0, 0, r * 1.95, 0, TAU); ctx.stroke();
+      ctx.restore();
+      ctx.lineWidth = 1;
+    }
+  }
+
+  function nearestStar(b) {
+    let best = null, bestD = Infinity;
+    for (const o of state.sim.bodies) {
+      if (o === b || o.kind !== 'star') continue;
+      const p = state.sim.bodyPos(o, state.sim.jd);
+      const q = state.sim.bodyPos(b, state.sim.jd);
+      const d = (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2;
+      if (d < bestD) { bestD = d; best = o; }
+    }
+    return best;
+  }
+
+  function render() {
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const pal = state.theme.canvas;
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, pal.bgTop);
+    bg.addColorStop(1, pal.bgBottom);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(buildStarfield(w, h, state.theme), 0, 0);
+
+    const sim = state.sim;
+
+    // follow camera
+    if (state.cam.followId != null) {
+      const f = sim.byId.get(state.cam.followId);
+      if (f) {
+        const p = sim.bodyPos(f, sim.jd);
+        state.cam.x += (p[0] - state.cam.x) * 0.22;
+        state.cam.y += (p[1] - state.cam.y) * 0.22;
+      } else state.cam.followId = null;
+    }
+
+    // orbit rails
+    for (const b of sim.bodies) drawOrbitFor(b);
+
+    // trails
+    for (const b of sim.bodies) if (b.state) drawTrail(b);
+
+    // bodies + labels
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+    let hoverChip = null;
+    for (const b of sim.bodies) {
+      const p = sim.bodyPos(b, sim.jd);
+      const [sx, sy] = worldToScreen(p[0], p[1]);
+      const r = bodyScreenRadius(b);
+      if (sx < -80 || sy < -80 || sx > w + 80 || sy > h + 80) continue;
+      drawBody(b, sx, sy, r);
+      const showLabel = b.kind === 'moon'
+        ? r > 2.5 || state.cam.ppAU / b.aAU > 300
+        : true;
+      if (showLabel && (b.kind !== 'moon' || state.cam.ppAU * b.aAU < 400)) {
+        ctx.fillStyle = pal.label;
+        ctx.fillText(b.name, sx + r + 5, sy - r - 3);
+      } else if (b.kind === 'moon') {
+        ctx.fillStyle = pal.faint;
+        if (r > 1.5) ctx.fillText(b.name, sx + r + 4, sy - r - 3);
+      }
+      if (b.id === state.hoverId) {
+        hoverChip = { b, sx, sy, r, dAU: Math.hypot(p[0], p[1]) };
+      }
+      if (b.id === state.selectedId) {
+        ctx.strokeStyle = pal.select;
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.arc(sx, sy, r + 6, 0, TAU); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1;
+      }
+    }
+
+    // spawn drag arrow
+    if (state.drag) {
+      const [ax, ay] = worldToScreen(state.drag.ax, state.drag.ay);
+      ctx.strokeStyle = pal.select;
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(state.mouse.x, state.mouse.y); ctx.stroke();
+      ctx.fillStyle = pal.select;
+      ctx.beginPath(); ctx.arc(ax, ay, 4, 0, TAU); ctx.fill();
+    }
+
+    // vignette
+    if (pal.vignette > 0) {
+      const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.36, w / 2, h / 2, Math.max(w, h) * 0.72);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(1, `rgba(0,0,0,${pal.vignette})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // scale bar
+    const niceAU = [0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 20, 50];
+    let barAU = niceAU[niceAU.length - 1];
+    for (const c of niceAU) { if (c * state.cam.ppAU >= 64) { barAU = c; break; } }
+    const barPx = barAU * state.cam.ppAU;
+    ctx.strokeStyle = pal.scale;
+    ctx.fillStyle = pal.scale;
+    ctx.beginPath();
+    ctx.moveTo(18, h - 26); ctx.lineTo(18 + barPx, h - 26);
+    ctx.moveTo(18, h - 30); ctx.lineTo(18, h - 22);
+    ctx.moveTo(18 + barPx, h - 30); ctx.lineTo(18 + barPx, h - 22);
+    ctx.stroke();
+    ctx.font = '10px Consolas, ui-monospace, monospace';
+    ctx.fillText(barAU + ' AU', 18 + barPx / 2 - 12, h - 32);
+    ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+
+    // hover chip in DOM (crisper text than canvas)
+    const chip = $('hover-chip');
+    if (hoverChip) {
+      chip.style.display = 'block';
+      chip.style.left = Math.min(hoverChip.sx + 14, w - 160) + 'px';
+      chip.style.top = (hoverChip.sy + 14) + 'px';
+      $('hover-name').textContent = hoverChip.b.name;
+      $('hover-info').textContent = `${fmtNumber(hoverChip.dAU, 'AU')} from origin · ${fmtMassEarth(hoverChip.b.massKg / MEARTH_KG)}`;
+      canvas.style.cursor = 'pointer';
+    } else {
+      chip.style.display = 'none';
+      canvas.style.cursor = state.placeMode ? 'crosshair' : 'default';
+    }
+  }
+
+  /* ---------------------------------------------------------- inspector */
+
+  function selected() { return state.sim.byId.get(state.selectedId) || null; }
+
+  function renderInspector() {
+    const b = selected();
+    const empty = $('insp-empty'), panel = $('insp-body');
+    if (!b) {
+      empty.style.display = 'block';
+      panel.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    panel.style.display = 'block';
+    const cat = CATALOG.find(c => c.key === b.catalog);
+    $('insp-dot').style.background = b.color;
+    $('insp-name').textContent = b.name;
+    $('insp-kind').textContent = { star: 'Star', planet: 'Planet', moon: 'Moon', dwarf: 'Dwarf planet', asteroid: 'Asteroid', comet: 'Comet', icegiant: 'Ice giant', gasgiant: 'Gas giant', terrestrial: 'Terrestrial planet', blackhole: 'Black hole' }[b.kind] || b.kind;
+
+    const p = state.sim.bodyPos(b, state.sim.jd);
+    const distAU = Math.hypot(p[0], p[1]);
+    const osc = state.sim.osculating(b);
+    const dayLabel = cat && cat.extra ? (cat.extra.find(([k]) => k === 'Day length') || [])[1] : null;
+    $('insp-dist').textContent = fmtNumber(distAU, 'AU');
+    $('insp-period').textContent = b.periodLabel || (osc ? fmtPeriod(osc.periodDays) : '—');
+    $('insp-rot').textContent = dayLabel || '—';
+
+    const descEl = $('insp-desc');
+    if (cat) {
+      descEl.style.display = 'block';
+      descEl.textContent = cat.desc;
+      const extra = $('insp-extra');
+      extra.innerHTML = '';
+      for (const [k, v] of (cat.extra || [])) {
+        const row = document.createElement('div');
+        row.className = 'fact-row';
+        const kEl = document.createElement('span');
+        kEl.textContent = k;
+        const vEl = document.createElement('span');
+        vEl.textContent = v;
+        row.appendChild(kEl); row.appendChild(vEl);
+        extra.appendChild(row);
+      }
+    } else {
+      descEl.style.display = 'none';
+      $('insp-extra').innerHTML = '';
+    }
+
+    $('btn-remove').style.display = canRemove(b) ? 'block' : 'none';
+    $('btn-release').style.display = state.sim.mode === 'rails' ? 'block' : 'none';
+    $('btn-follow').textContent = state.cam.followId === b.id ? '◉ Following' : '👁 Follow';
+  }
+
+  function canRemove(b) {
+    const stars = state.sim.bodies.filter(x => x.kind === 'star');
+    if (b.kind === 'star' && stars.length === 1) return false;
+    return true;
+  }
+
+  /* --------------------------------------------------------- create tab */
+
+  const createState = { type: 'terrestrial', massEarth: 1, radiusKm: 6371, distAU: 1.5, dir: 'pro', velFactor: 1 };
+
+  function setType(t) {
+    const def = BODY_TYPES.find(x => x.id === t);
+    createState.type = t;
+    createState.massEarth = def.massEarth;
+    createState.radiusKm = def.radiusKm;
+    createState.distAU = def.dfltDist;
+    syncCreateForm();
+  }
+
+  function syncCreateForm() {
+    const def = BODY_TYPES.find(x => x.id === createState.type);
+    document.querySelectorAll('#type-grid button').forEach(el => {
+      const on = el.dataset.type === createState.type;
+      el.classList.toggle('on', on);
+    });
+    $('c-name').value = $('c-name').dataset.touched === '1' ? $('c-name').value : '';
+    setSlider('c-mass', Math.log10(createState.massEarth), -7, 7, (v) => {
+      createState.massEarth = Math.pow(10, v);
+      $('c-mass-out').textContent = fmtMassEarth(createState.massEarth);
+    });
+    setSlider('c-radius', Math.log10(createState.radiusKm), 1, 6.5, (v) => {
+      createState.radiusKm = Math.pow(10, v);
+      $('c-radius-out').textContent = fmtNumber(createState.radiusKm, 'km');
+    });
+    setSlider('c-dist', Math.log10(createState.distAU), -1.3, 2, (v) => {
+      createState.distAU = Math.pow(10, v);
+      $('c-dist-out').textContent = fmtNumber(createState.distAU, 'AU');
+    });
+    $('c-color').value = def.color;
+  }
+
+  function setSlider(id, val, min, max, fn) {
+    const el = $(id);
+    el.min = min; el.max = max; el.step = 0.001;
+    el.value = clamp(val, min, max);
+    fn(parseFloat(el.value));
+  }
+
+  function syncGravityChip() {
+    const live = state.sim.mode === 'nbody';
+    $('gravity-chip').textContent = live ? 'Gravity: live' : 'Gravity: rails';
+    $('gravity-chip').classList.toggle('on', live);
+    $('btn-gravity').classList.toggle('on', live);
+  }
+
+  function loadScenarioNamed(id, label) {
+    state.sim.loadPreset(id);
+    state.presetName = label;
+    state.selectedId = null;
+    state.cam.followId = null;
+    syncGravityChip();
+    renderInspector();
+  }
+
+  function addFromForm() {
+    const sim = state.sim;
+    const ang = Math.random() * TAU;
+    const dist = createState.distAU;
+    const px = dist * Math.cos(ang), py = dist * Math.sin(ang);
+    // circular velocity w.r.t. the total star mass (defaults to the Sun's)
+    let mCentral = 0;
+    for (const b of sim.bodies) if (b.kind === 'star') mCentral += b.massKg / MSUN_KG;
+    if (mCentral === 0) mCentral = 1;
+    const vCirc = Math.sqrt(K2 * mCentral / dist);
+    const s = createState.dir === 'retro' ? -createState.velFactor : createState.velFactor;
+    const vx = -vCirc * Math.sin(ang) * s, vy = vCirc * Math.cos(ang) * s;
+    const name = $('c-name').value.trim() || undefined;
+    sim.addCustom({
+      name, kind: createState.type, massEarth: createState.massEarth,
+      radiusKm: createState.radiusKm, color: $('c-color').value,
+      ring: $('c-ring').checked,
+      posAU: [px, py, 0], velAUd: [vx, vy, 0],
+    });
+    if (!name) $('c-name').dataset.touched = '0';
+    const added = sim.bodies[sim.bodies.length - 1];
+    toast(`${added.name} added — ${fmtNumber(dist, 'AU')} orbit`);
+    state.selectedId = added.id;
+    switchTab('inspect');
+  }
+
+  /* ---------------------------------------------------------- library tab */
+
+  function renderLibrary() {
+    const grid = $('preset-grid');
+    grid.innerHTML = '';
+    for (const p of PRESETS) {
+      const card = document.createElement('button');
+      card.className = 'preset-card';
+      const icon = document.createElement('span');
+      icon.className = 'preset-icon';
+      icon.textContent = p.icon;
+      const name = document.createElement('strong');
+      name.textContent = p.name;
+      const desc = document.createElement('small');
+      desc.textContent = p.desc;
+      card.appendChild(icon);
+      const txt = document.createElement('span');
+      txt.appendChild(name); txt.appendChild(desc);
+      card.appendChild(txt);
+      card.addEventListener('click', () => {
+        loadScenarioNamed(p.id, p.name);
+        toast(`${p.name} loaded`);
+        renderLibraryCurrent();
+      });
+      grid.appendChild(card);
+    }
+    renderLibraryCurrent();
+  }
+
+  function renderLibraryCurrent() {
+    const el = $('library-current');
+    el.textContent = `${state.presetName || 'Custom scenario'} · ${state.sim.bodies.length} bodies · ` +
+      (state.sim.mode === 'rails' ? 'ephemeris rails' : 'live gravity');
+  }
+
+  function exportScenario() {
+    const data = JSON.stringify(state.sim.serialize(), null, 1);
+    const blob = new Blob([data], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'scenario.solar.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast('Scenario exported');
+  }
+
+  function importScenario(file) {
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const data = JSON.parse(fr.result);
+        if (state.sim.loadScenario(data)) {
+          state.selectedId = null;
+          state.cam.followId = null;
+          state.presetName = 'Imported scenario';
+          syncGravityChip();
+          toast(`Scenario loaded — ${state.sim.bodies.length} bodies`);
+          renderLibraryCurrent();
+        } else toast('Not a scenario file', 'warn');
+      } catch { toast('Could not read that file', 'warn'); }
+    };
+    fr.readAsText(file);
+  }
+
+  /* -------------------------------------------------------------- toasts */
+
+  function toast(text, kind) {
+    const wrap = $('toasts');
+    const el = document.createElement('div');
+    el.className = 'toast' + (kind ? ' ' + kind : '');
+    el.textContent = text;
+    wrap.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('in'));
+    setTimeout(() => {
+      el.classList.remove('in');
+      setTimeout(() => el.remove(), 300);
+    }, 2600);
+  }
+
+  /* -------------------------------------------------------------- themes */
+
+  function applyTheme(i) {
+    state.theme = THEMES[i % THEMES.length];
+    document.documentElement.dataset.theme = state.theme.id;
+    state.starfieldKey = '';
+    try { localStorage.setItem('sss-theme', state.theme.id); } catch {}
+    $('theme-label').textContent = state.theme.name;
+  }
+  function cycleTheme() {
+    const i = THEMES.findIndex(t => t.id === state.theme.id);
+    applyTheme(i + 1);
+    toast(`Theme: ${state.theme.name}`);
+  }
+
+  /* --------------------------------------------------------------- tabs */
+
+  function switchTab(t) {
+    state.tab = t;
+    for (const id of ['inspect', 'create', 'library']) {
+      $('tab-' + id).classList.toggle('on', id === t);
+      $('panel-' + id).style.display = id === t ? 'block' : 'none';
+    }
+    if (t === 'library') renderLibrary();
+  }
+
+  /* ------------------------------------------------------------- events */
+
+  function bindEvents() {
+    window.addEventListener('resize', () => { state.starfieldKey = ''; });
+
+    canvas.addEventListener('mousedown', (e) => {
+      const r = canvas.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      state.mouse.x = mx; state.mouse.y = my;
+      if (state.placeMode && e.button === 0) {
+        const [wx, wy] = screenToWorld(mx, my);
+        state.drag = { ax: wx, ay: wy };
+        return;
+      }
+      state.mouse.down = true;
+      state.mouse.panning = true;
+      state.mouse.lastX = e.clientX; state.mouse.lastY = e.clientY;
+      state.mouse.button = e.button;
+    });
+    window.addEventListener('mousemove', (e) => {
+      const r = canvas.getBoundingClientRect();
+      state.mouse.x = e.clientX - r.left;
+      state.mouse.y = e.clientY - r.top;
+      if (state.mouse.panning && !state.drag) {
+        state.cam.x -= (e.clientX - state.mouse.lastX) / state.cam.ppAU;
+        state.cam.y += (e.clientY - state.mouse.lastY) / state.cam.ppAU;
+        state.cam.followId = null;
+        state.mouse.lastX = e.clientX; state.mouse.lastY = e.clientY;
+      }
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (state.drag) {
+        const [wx, wy] = screenToWorld(state.mouse.x, state.mouse.y);
+        let dvx = (wx - state.drag.ax), dvy = (wy - state.drag.ay);
+        const dLen = Math.hypot(dvx, dvy);
+        const def = BODY_TYPES.find(x => x.id === createState.type);
+        let mCentral = 0;
+        for (const b of state.sim.bodies) if (b.kind === 'star') mCentral += b.massKg / MSUN_KG;
+        if (mCentral === 0) mCentral = 1;
+        const vRef = Math.sqrt(K2 * mCentral / Math.max(0.05, Math.hypot(state.drag.ax, state.drag.ay)));
+        // drag across the distance to the star = circular velocity there
+        const gain = dLen > 1e-6 ? 1 : 0;
+        let vx = dLen > 1e-6 ? dvx * vRef : vRef;
+        let vy = dLen > 1e-6 ? dvy * vRef : 0;
+        if (dLen > 1e-6) { vx = dvx * vRef; vy = dvy * vRef; }
+        state.sim.addCustom({
+          kind: createState.type, massEarth: createState.massEarth,
+          radiusKm: createState.radiusKm, color: $('c-color').value,
+          name: $('c-name').value.trim() || undefined,
+          posAU: [state.drag.ax, state.drag.ay, 0], velAUd: [vx, vy, 0],
+        });
+        toast('Body placed by drag');
+        state.drag = null;
+        setPlaceMode(false);
+        return;
+      }
+      if (state.mouse.panning && state.mouse.button === 0) {
+        const moved = Math.hypot(e.clientX - state.mouse.lastX, e.clientY - state.mouse.lastY);
+        if (moved < 4) {
+          const r = canvas.getBoundingClientRect();
+          const hit = pickBody(e.clientX - r.left, e.clientY - r.top);
+          if (hit) {
+            state.selectedId = hit.id;
+            switchTab('inspect');
+          } else state.selectedId = null;
+          renderInspector();
+        }
+      }
+      state.mouse.panning = false;
+      state.mouse.down = false;
+    });
+    canvas.addEventListener('dblclick', (e) => {
+      const r = canvas.getBoundingClientRect();
+      const hit = pickBody(e.clientX - r.left, e.clientY - r.top);
+      if (hit) {
+        state.selectedId = hit.id;
+        state.cam.followId = hit.id;
+        renderInspector();
+      }
+    });
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const r = canvas.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      const [wx, wy] = screenToWorld(mx, my);
+      const factor = Math.pow(1.0016, -e.deltaY);
+      state.cam.ppAU = clamp(state.cam.ppAU * factor, 2, 40000);
+      // keep the point under the cursor fixed
+      const [wx2, wy2] = screenToWorld(mx, my);
+      state.cam.x += wx - wx2;
+      state.cam.y += wy - wy2;
+    }, { passive: false });
+
+    canvas.addEventListener('mousemove', () => {
+      const hit = pickBody(state.mouse.x, state.mouse.y);
+      state.hoverId = hit ? hit.id : null;
+    });
+
+    // transport
+    $('btn-play').addEventListener('click', togglePlay);
+    $('btn-now').addEventListener('click', () => { state.sim.jd = nowJD(); toast('Epoch set to now'); });
+    $('speed').addEventListener('input', (e) => {
+      state.sim.speed = Math.pow(10, e.target.value / 1000 * 5 - 2);
+      $('speed-out').textContent = fmtSpeed(state.sim.speed);
+    });
+    $('scenario').addEventListener('change', (e) => {
+      loadScenarioNamed(e.target.value, e.target.selectedOptions[0].text);
+      toast(`${e.target.selectedOptions[0].text} loaded`);
+    });
+    $('btn-gravity').addEventListener('click', () => {
+      state.sim.releaseToNBody();
+      syncGravityChip();
+      toast('Gravity released');
+    });
+    $('btn-theme').addEventListener('click', cycleTheme);
+    $('btn-help').addEventListener('click', () => $('help').classList.add('open'));
+    $('help-close').addEventListener('click', () => $('help').classList.remove('open'));
+
+    // inspector
+    $('tab-inspect').addEventListener('click', () => switchTab('inspect'));
+    $('tab-create').addEventListener('click', () => switchTab('create'));
+    $('tab-library').addEventListener('click', () => switchTab('library'));
+    $('btn-focus').addEventListener('click', () => {
+      const b = selected();
+      if (b) {
+        const p = state.sim.bodyPos(b, state.sim.jd);
+        state.cam.x = p[0]; state.cam.y = p[1];
+        state.cam.followId = b.id;
+      }
+    });
+    $('btn-follow').addEventListener('click', () => {
+      const b = selected();
+      if (!b) return;
+      state.cam.followId = state.cam.followId === b.id ? null : b.id;
+      renderInspector();
+    });
+    $('btn-release').addEventListener('click', () => {
+      state.sim.releaseToNBody();
+      $('btn-gravity').classList.add('on');
+      renderInspector();
+    });
+    $('btn-remove').addEventListener('click', () => {
+      if (state.sim.removeBody(state.selectedId)) {
+        state.selectedId = null;
+        if (state.cam.followId === state.selectedId) state.cam.followId = null;
+        renderInspector();
+      }
+    });
+
+    // create
+    $('type-grid').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-type]');
+      if (btn) setType(btn.dataset.type);
+    });
+    $('c-mass').addEventListener('input', (e) => {
+      createState.massEarth = Math.pow(10, parseFloat(e.target.value));
+      $('c-mass-out').textContent = fmtMassEarth(createState.massEarth);
+    });
+    $('c-radius').addEventListener('input', (e) => {
+      createState.radiusKm = Math.pow(10, parseFloat(e.target.value));
+      $('c-radius-out').textContent = fmtNumber(createState.radiusKm, 'km');
+    });
+    $('c-dist').addEventListener('input', (e) => {
+      createState.distAU = Math.pow(10, parseFloat(e.target.value));
+      $('c-dist-out').textContent = fmtNumber(createState.distAU, 'AU');
+    });
+    $('c-dir').addEventListener('change', (e) => { createState.dir = e.target.value; });
+    $('c-vel').addEventListener('change', (e) => { createState.velFactor = parseFloat(e.target.value); });
+    $('c-name').addEventListener('input', () => { $('c-name').dataset.touched = '1'; });
+    $('btn-add').addEventListener('click', addFromForm);
+    $('btn-place').addEventListener('click', () => setPlaceMode(!state.placeMode));
+
+    // parts templates
+    const parts = $('parts-list');
+    parts.innerHTML = '';
+    for (const part of PARTS) {
+      const chip = document.createElement('button');
+      chip.className = 'part-chip';
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = part.color;
+      const nm = document.createElement('span');
+      nm.textContent = part.name;
+      chip.appendChild(dot); chip.appendChild(nm);
+      chip.title = part.desc;
+      chip.addEventListener('click', () => {
+        const t = BODY_TYPES.find(x => x.id === part.type);
+        createState.type = part.type;
+        createState.massEarth = part.massEarth;
+        createState.radiusKm = part.radiusKm;
+        createState.distAU = t.dfltDist;
+        syncCreateForm();
+        $('c-name').value = part.name;
+        $('c-name').dataset.touched = '1';
+        $('c-color').value = part.color;
+        $('c-ring').checked = !!part.ring;
+        toast(`${part.name} template loaded — press Add`);
+      });
+      parts.appendChild(chip);
+    }
+
+    // library
+    $('btn-export').addEventListener('click', exportScenario);
+    $('btn-import').addEventListener('click', () => $('file-import').click());
+    $('file-import').addEventListener('change', (e) => {
+      if (e.target.files.length) importScenario(e.target.files[0]);
+      e.target.value = '';
+    });
+
+    // keyboard
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+      switch (e.key) {
+        case ' ': togglePlay(); e.preventDefault(); break;
+        case 'f': case 'F': $('btn-focus').click(); break;
+        case 't': case 'T': case 'F3': cycleTheme(); e.preventDefault(); break;
+        case 'c': case 'C': switchTab('create'); break;
+        case 'l': case 'L': switchTab('library'); break;
+        case 'Escape': $('help').classList.remove('open'); state.selectedId = null; renderInspector(); break;
+        case 'Delete': case 'Backspace': if (selected() && canRemove(selected())) $('btn-remove').click(); break;
+        case '+': case '=': state.cam.ppAU = clamp(state.cam.ppAU * 1.25, 2, 40000); break;
+        case '-': state.cam.ppAU = clamp(state.cam.ppAU / 1.25, 2, 40000); break;
+      }
+    });
+  }
+
+  function setPlaceMode(on) {
+    state.placeMode = on;
+    $('btn-place').classList.toggle('on', on);
+    $('btn-place').textContent = on ? '✕ Cancel placing' : '✛ Place by drag';
+  }
+
+  function togglePlay() {
+    state.sim.paused = !state.sim.paused;
+    $('btn-play').textContent = state.sim.paused ? '▶' : '❚❚';
+    $('btn-play').classList.toggle('paused', state.sim.paused);
+    $('status-run').textContent = state.sim.paused ? 'paused' : 'running';
+  }
+
+  /* --------------------------------------------------------------- loop */
+
+  let lastT = performance.now();
+
+  function frame(t) {
+    const dt = Math.min(0.1, (t - lastT) / 1000);
+    lastT = t;
+    state.fps += ((dt > 0 ? 1 / dt : 60) - state.fps) * 0.05;
+
+    state.sim.advance(dt);
+    render();
+    updateHud();
+
+    for (const ev of state.sim.drainEvents()) toast(ev.text, ev.kind === 'merge' ? 'warn' : undefined);
+    requestAnimationFrame(frame);
+  }
+
+  let hudClock = 0;
+  function updateHud() {
+    hudClock++;
+    if (hudClock % 6 === 0) {
+      $('epoch').textContent = fmtDate(state.sim.jd);
+      const dyn = state.sim.bodies.filter(b => b.state).length;
+      $('status-count').textContent = `${state.sim.bodies.length} bodies`;
+      $('status-mode').textContent = state.sim.mode === 'rails' ? 'ephemeris rails' : 'live gravity';
+      if (state.tab === 'inspect') renderInspector();
+      if (state.tab === 'library') renderLibraryCurrent();
+    }
+    $('status-fps').textContent = Math.round(state.fps) + ' fps';
+    $('status-size').textContent = `${canvas.clientWidth} × ${canvas.clientHeight}`;
+  }
+
+  /* --------------------------------------------------------------- boot */
+
+  function boot() {
+    // restore theme
+    let saved = null;
+    try { saved = localStorage.getItem('sss-theme'); } catch {}
+    const idx = Math.max(0, THEMES.findIndex(t => t.id === saved));
+    applyTheme(idx);
+
+    // scenario select
+    const sel = $('scenario');
+    sel.innerHTML = '';
+    for (const p of PRESETS) {
+      const o = document.createElement('option');
+      o.value = p.id; o.textContent = p.name;
+      sel.appendChild(o);
+    }
+    sel.value = 'solar';
+    state.sim.loadPreset('solar');
+
+    // type grid
+    const grid = $('type-grid');
+    grid.innerHTML = '';
+    for (const t of BODY_TYPES) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.type = t.id;
+      b.textContent = t.label;
+      grid.appendChild(b);
+    }
+    setType('terrestrial');
+    state.sim.speed = 1;
+    $('speed').value = 600; // 10^((600/1000)*5-2) = 1 day/s
+    $('speed-out').textContent = fmtSpeed(1);
+
+    bindEvents();
+    switchTab('inspect');
+    requestAnimationFrame(frame);
+
+    // debug/testing hook
+    window.__sss = { sim: state.sim, state, addFromForm, setType, exportScenario };
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+
+</script>
+</body>
+</html>
