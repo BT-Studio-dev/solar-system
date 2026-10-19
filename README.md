@@ -1,6 +1,8 @@
 # Solar System Sandbox
 
-**[Open the simulator](index.html)** · a real-time solar system and N-body gravity sandbox that runs entirely in your browser — plain HTML, CSS and JavaScript, no build step and no dependencies.
+**[Open the simulator](index.html)**
+**[Windows x64 installer](windows/SolarSystemSandbox-1.0.0-Setup-x64.exe)** ·
+[all Windows builds](windows/) — the original native app (Windows 7 SP1+, 32/64-bit) is also here, built from the same project's C sources · a real-time solar system and N-body gravity sandbox that runs entirely in your browser — plain HTML, CSS and JavaScript, no build step and no dependencies.
 
 Planets follow **JPL's approximate ephemerides** (J2000 Keplerian elements with secular rates, accurate to minutes of arc across 1800–2050). The moment you add, remove or release a body, the whole system switches to a symplectic **velocity-Verlet N-body integrator** and everything starts pulling on everything else.
 
