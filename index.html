@@ -105,7 +105,55 @@
 
           <p id="insp-desc"></p>
           <div id="insp-extra"></div>
+          <div id="insp-sats"></div>
         </div>
+
+        <section class="sim-extra">
+          <div class="sim-block">
+            <label>Start date</label>
+            <div class="date-row">
+              <input type="number" id="date-y" min="1800" max="2050" value="2026" aria-label="year">
+              <input type="number" id="date-m" min="1" max="12" value="1" aria-label="month">
+              <input type="number" id="date-d" min="1" max="31" value="1" aria-label="day">
+              <button id="btn-set-date">SET</button>
+            </div>
+          </div>
+
+          <div class="sim-block">
+            <label>View</label>
+            <div class="chip-row" id="view-chips">
+              <button class="chip on" data-view="labels">Labels</button>
+              <button class="chip on" data-view="orbits">Orbits</button>
+              <button class="chip on" data-view="moons">Moons</button>
+              <button class="chip on" data-view="trails">Trails</button>
+            </div>
+          </div>
+
+          <div class="sim-block">
+            <label for="track-sel">Auto-track</label>
+            <select id="track-sel"></select>
+          </div>
+
+          <div class="sim-block">
+            <label>Object separation</label>
+            <div class="sep-row">
+              <select id="sep-a"></select>
+              <span>→</span>
+              <select id="sep-b"></select>
+            </div>
+            <output id="sep-out">—</output>
+          </div>
+
+          <div class="sim-block">
+            <label>Quick actions</label>
+            <div class="quick-grid">
+              <button id="qa-asteroid">☄ Spawn asteroid</button>
+              <button id="qa-comet">✦ Spawn comet</button>
+              <button id="qa-trails">⌫ Clear trails</button>
+              <button id="qa-empty">🗑 Empty sky</button>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section class="panel" id="panel-create" style="display:none">
@@ -175,6 +223,15 @@
 
       <section class="panel" id="panel-library" style="display:none">
         <span id="library-current">—</span>
+
+        <div class="ctl">
+          <div class="row"><label>Texture packs</label></div>
+          <div id="pack-list"></div>
+        </div>
+
+        <div class="ctl">
+          <div class="row"><label>Scenarios</label></div>
+        </div>
         <div id="preset-grid"></div>
         <div class="lib-actions">
           <button id="btn-export">⭳ Export scenario</button>
@@ -189,6 +246,7 @@
   <footer id="statusbar">
     <span id="status-count">0 bodies</span>
     <span id="status-mode">ephemeris rails</span>
+    <span id="status-run">running</span>
     <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · M sound · C create · L library</span>
     <span class="right"><span id="status-fps">60 fps</span><span id="status-size">—</span></span>
   </footer>

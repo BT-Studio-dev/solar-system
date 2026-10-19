@@ -203,6 +203,15 @@ const THEMES = [
   },
 ];
 
+/* ------------------------------------------------- texture pack recolours -- */
+/* Tint + strength, mirroring the desktop app's pack.ini format. */
+
+const PACKS = [
+  { id: 'theme', name: 'Theme colours', desc: 'no recolour', tint: null, strength: 0 },
+  { id: 'deep-blue', name: 'Deep Blue', desc: 'cold starlight · 45%', tint: '#4a7ab8', strength: 0.45, blend: 'soft-light' },
+  { id: 'warm-dusk', name: 'Warm Dusk', desc: 'amber light · 35%', tint: '#e8a25c', strength: 0.35, blend: 'soft-light' },
+];
+
 /* ------------------------------------------------------- scenario presets -- */
 
 const PRESETS = [

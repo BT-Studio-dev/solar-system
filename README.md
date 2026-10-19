@@ -11,6 +11,9 @@ Planets follow **JPL's approximate ephemerides** (J2000 Keplerian elements with 
 - **Hybrid engine** — planets ride their ephemeris "rails" while your bodies feel the full moving gravitational field; release gravity and the rails come off.
 - **Five colour themes** — Aero Night, Aero Day, Luna Blue, Aurora and High Contrast, restyling the shell *and* the viewport (<kbd>T</kbd> or <kbd>F3</kbd>).
 - **Inspector** — click any body for live distance, period, speed, mass and facts; focus or follow it around its orbit.
+- **Simulation panel** — set the start date (1800–2050), toggle Labels / Orbits / Moons / Trails, auto-track any body, read the live separation between any two objects, and one-click *Spawn asteroid*, *Spawn comet*, *Clear trails* and *Empty sky*.
+- **Texture packs** — *Deep Blue* (cold starlight · 45%) and *Warm Dusk* (amber light · 35%) recolour the viewport over any theme, just like the desktop app's `pack.ini` files.
+- **Satellites** — select a planet to see its moons with orbit radii; click one to select it.
 - **Scenario files** — the Library tab exports and imports plain `.json` scenarios you can share; five presets from *Inner System* to a *Binary Star* run.
 - **Procedural sound** — every effect (select blips, add/remove sweeps, collision thuds, the gravity-release whoosh, theme switches) is synthesized live with the Web Audio API — no audio files. Master volume slider, mute, and an optional ambient space hum under the 🔊 button (<kbd>M</kbd> to mute).
 

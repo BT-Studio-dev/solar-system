@@ -254,6 +254,60 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
 .part-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; padding: 5px 10px; }
 .part-chip .dot { width: 9px; height: 9px; border-radius: 50%; }
 
+/* simulation extras (bottom of the inspect panel) */
+.sim-extra {
+  border-top: 1px solid var(--line);
+  margin-top: 16px; padding-top: 6px;
+}
+.sim-block { margin: 10px 0 2px; }
+.sim-block > label, .ctl > .row > label {
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+}
+.date-row { display: flex; gap: 6px; margin-top: 6px; }
+.date-row input {
+  width: 100%; min-width: 0; font: 600 12px Consolas, ui-monospace, monospace;
+  color: var(--text); background: var(--chip);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 6px; text-align: center;
+}
+.date-row input:first-child { flex: 1.6; }
+.date-row input { flex: 1; }
+.date-row button { flex: none; font-size: 11px; padding: 6px 10px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip-row .chip { font-size: 11.5px; padding: 5px 10px; border-radius: 999px; }
+.chip-row .chip.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+#track-sel, .sep-row select { width: 100%; margin-top: 6px; }
+.sep-row { display: flex; align-items: center; gap: 6px; }
+.sep-row span { color: var(--faint); }
+#sep-out {
+  display: block; margin-top: 7px;
+  font: 600 12px Consolas, ui-monospace, monospace; color: var(--accent-2);
+}
+.quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 6px; }
+.quick-grid button { font-size: 12px; padding: 8px 4px; }
+
+/* satellites list */
+#insp-sats { margin: 10px 0 4px; }
+#insp-sats .sat-head {
+  display: flex; justify-content: space-between;
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+}
+#insp-sats .sat-row {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; text-align: left; margin-top: 5px; padding: 6px 9px; font-size: 12px;
+}
+#insp-sats .sat-row .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+#insp-sats .sat-row small { color: var(--muted); font-family: Consolas, ui-monospace, monospace; }
+
+/* texture packs */
+#pack-list { display: grid; gap: 7px; margin-top: 8px; }
+.pack-row { display: flex; align-items: center; gap: 10px; text-align: left; }
+.pack-row .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; border: 1px solid var(--line-2); }
+.pack-row strong { font-size: 12.5px; display: block; }
+.pack-row small { color: var(--muted); font-size: 11px; }
+.pack-row.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.pack-row.on small { color: var(--accent-text); opacity: .8; }
+.pack-row.on .swatch { border-color: rgba(255,255,255,.7); }
+
 /* library tab */
 #library-current { font: 11px Consolas, ui-monospace, monospace; color: var(--muted); margin: 4px 0 12px; }
 #preset-grid { display: grid; gap: 8px; }
@@ -417,7 +471,55 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
 
           <p id="insp-desc"></p>
           <div id="insp-extra"></div>
+          <div id="insp-sats"></div>
         </div>
+
+        <section class="sim-extra">
+          <div class="sim-block">
+            <label>Start date</label>
+            <div class="date-row">
+              <input type="number" id="date-y" min="1800" max="2050" value="2026" aria-label="year">
+              <input type="number" id="date-m" min="1" max="12" value="1" aria-label="month">
+              <input type="number" id="date-d" min="1" max="31" value="1" aria-label="day">
+              <button id="btn-set-date">SET</button>
+            </div>
+          </div>
+
+          <div class="sim-block">
+            <label>View</label>
+            <div class="chip-row" id="view-chips">
+              <button class="chip on" data-view="labels">Labels</button>
+              <button class="chip on" data-view="orbits">Orbits</button>
+              <button class="chip on" data-view="moons">Moons</button>
+              <button class="chip on" data-view="trails">Trails</button>
+            </div>
+          </div>
+
+          <div class="sim-block">
+            <label for="track-sel">Auto-track</label>
+            <select id="track-sel"></select>
+          </div>
+
+          <div class="sim-block">
+            <label>Object separation</label>
+            <div class="sep-row">
+              <select id="sep-a"></select>
+              <span>→</span>
+              <select id="sep-b"></select>
+            </div>
+            <output id="sep-out">—</output>
+          </div>
+
+          <div class="sim-block">
+            <label>Quick actions</label>
+            <div class="quick-grid">
+              <button id="qa-asteroid">☄ Spawn asteroid</button>
+              <button id="qa-comet">✦ Spawn comet</button>
+              <button id="qa-trails">⌫ Clear trails</button>
+              <button id="qa-empty">🗑 Empty sky</button>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section class="panel" id="panel-create" style="display:none">
@@ -487,6 +589,15 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
 
       <section class="panel" id="panel-library" style="display:none">
         <span id="library-current">—</span>
+
+        <div class="ctl">
+          <div class="row"><label>Texture packs</label></div>
+          <div id="pack-list"></div>
+        </div>
+
+        <div class="ctl">
+          <div class="row"><label>Scenarios</label></div>
+        </div>
         <div id="preset-grid"></div>
         <div class="lib-actions">
           <button id="btn-export">⭳ Export scenario</button>
@@ -501,6 +612,7 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
   <footer id="statusbar">
     <span id="status-count">0 bodies</span>
     <span id="status-mode">ephemeris rails</span>
+    <span id="status-run">running</span>
     <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · M sound · C create · L library</span>
     <span class="right"><span id="status-fps">60 fps</span><span id="status-size">—</span></span>
   </footer>
@@ -731,6 +843,15 @@ const THEMES = [
       scale: 'rgba(255,255,255,0.9)', flat: true,
     },
   },
+];
+
+/* ------------------------------------------------- texture pack recolours -- */
+/* Tint + strength, mirroring the desktop app's pack.ini format. */
+
+const PACKS = [
+  { id: 'theme', name: 'Theme colours', desc: 'no recolour', tint: null, strength: 0 },
+  { id: 'deep-blue', name: 'Deep Blue', desc: 'cold starlight · 45%', tint: '#4a7ab8', strength: 0.45, blend: 'soft-light' },
+  { id: 'warm-dusk', name: 'Warm Dusk', desc: 'amber light · 35%', tint: '#e8a25c', strength: 0.35, blend: 'soft-light' },
 ];
 
 /* ------------------------------------------------------- scenario presets -- */
@@ -1449,6 +1570,10 @@ const Sfx = (() => {
     drag: null,           // {ax,ay} world coords while dragging a spawn vector
     fps: 60,
     tab: 'inspect',
+    view: { labels: true, orbits: true, moons: true, trails: true },
+    pack: PACKS[0],
+    sepA: null, sepB: null,
+    selectsSig: null,
     starfield: null,
     starfieldKey: '',
   };
@@ -1569,6 +1694,7 @@ const Sfx = (() => {
     const pal = state.theme.canvas;
     ctx.beginPath();
     if (b.parentKey) {
+      if (!state.view.moons) return;
       const parent = state.sim.bodies.find(x => x.catalog === b.parentKey);
       if (!parent) return;
       const [px, py] = worldToScreen(...state.sim.bodyPos(parent, state.sim.jd));
@@ -1576,6 +1702,7 @@ const Sfx = (() => {
       if (r * 2 > 6) { ctx.strokeStyle = pal.moonOrbit; ctx.arc(px, py, r, 0, TAU); ctx.stroke(); }
       return;
     }
+    if (!state.view.orbits) return;
     if (!b.elemKey && !b.railKey) return;
     const el = elementsAt(PLANET_ELEMENTS[b.elemKey || b.railKey], T);
     const cw = Math.cos(el.w - el.O), sw = Math.sin(el.w - el.O);
@@ -1730,20 +1857,21 @@ const Sfx = (() => {
     for (const b of sim.bodies) drawOrbitFor(b);
 
     // trails
-    for (const b of sim.bodies) if (b.state) drawTrail(b);
+    if (state.view.trails) for (const b of sim.bodies) if (b.state) drawTrail(b);
 
     // bodies + labels
     ctx.font = '11px "Segoe UI", system-ui, sans-serif';
     let hoverChip = null;
     for (const b of sim.bodies) {
+      if (!state.view.moons && b.kind === 'moon') continue;
       const p = sim.bodyPos(b, sim.jd);
       const [sx, sy] = worldToScreen(p[0], p[1]);
       const r = bodyScreenRadius(b);
       if (sx < -80 || sy < -80 || sx > w + 80 || sy > h + 80) continue;
       drawBody(b, sx, sy, r);
-      const showLabel = b.kind === 'moon'
+      const showLabel = state.view.labels && (b.kind === 'moon'
         ? r > 2.5 || state.cam.ppAU / b.aAU > 300
-        : true;
+        : true);
       if (showLabel && (b.kind !== 'moon' || state.cam.ppAU * b.aAU < 400)) {
         ctx.fillStyle = pal.label;
         ctx.fillText(b.name, sx + r + 5, sy - r - 3);
@@ -1771,6 +1899,16 @@ const Sfx = (() => {
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(state.mouse.x, state.mouse.y); ctx.stroke();
       ctx.fillStyle = pal.select;
       ctx.beginPath(); ctx.arc(ax, ay, 4, 0, TAU); ctx.fill();
+    }
+
+    // texture pack tint
+    if (state.pack.tint && !pal.flat) {
+      ctx.save();
+      ctx.globalCompositeOperation = state.pack.blend || 'soft-light';
+      ctx.globalAlpha = state.pack.strength;
+      ctx.fillStyle = state.pack.tint;
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
     }
 
     // vignette
@@ -1864,6 +2002,40 @@ const Sfx = (() => {
     $('btn-remove').style.display = canRemove(b) ? 'block' : 'none';
     $('btn-release').style.display = state.sim.mode === 'rails' ? 'block' : 'none';
     $('btn-follow').textContent = state.cam.followId === b.id ? '◉ Following' : '👁 Follow';
+
+    // satellites: catalogue moons orbiting the selected planet
+    const satsEl = $('insp-sats');
+    const moons = b.catalog ? CATALOG.filter(c => c.parent === b.catalog) : [];
+    satsEl.innerHTML = '';
+    if (moons.length) {
+      satsEl.style.display = 'block';
+      const head = document.createElement('div');
+      head.className = 'sat-head';
+      const hl = document.createElement('span');
+      hl.textContent = 'Satellites';
+      const hr = document.createElement('span');
+      hr.textContent = moons.length + (moons.length === 1 ? ' moon' : ' moons');
+      head.appendChild(hl); head.appendChild(hr);
+      satsEl.appendChild(head);
+      for (const s of moons) {
+        const row = document.createElement('button');
+        row.className = 'sat-row';
+        const left = document.createElement('span');
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = s.color;
+        left.appendChild(dot);
+        left.appendChild(document.createTextNode(s.name));
+        const right = document.createElement('small');
+        right.textContent = fmtNumber(s.aAU * AU_KM, 'km');
+        row.appendChild(left); row.appendChild(right);
+        row.addEventListener('click', () => {
+          const target = state.sim.bodies.find(x => x.catalog === s.key);
+          if (target) { state.selectedId = target.id; Sfx.select(); renderInspector(); }
+        });
+        satsEl.appendChild(row);
+      }
+    }
   }
 
   function canRemove(b) {
@@ -1918,7 +2090,6 @@ const Sfx = (() => {
     const live = state.sim.mode === 'nbody';
     $('gravity-chip').textContent = live ? 'Gravity: live' : 'Gravity: rails';
     $('gravity-chip').classList.toggle('on', live);
-    $('btn-gravity').classList.toggle('on', live);
   }
 
   function loadScenarioNamed(id, label) {
@@ -1961,6 +2132,7 @@ const Sfx = (() => {
   /* ---------------------------------------------------------- library tab */
 
   function renderLibrary() {
+    renderPacks();
     const grid = $('preset-grid');
     grid.innerHTML = '';
     for (const p of PRESETS) {
@@ -2021,6 +2193,180 @@ const Sfx = (() => {
       } catch { toast('Could not read that file', 'warn'); }
     };
     fr.readAsText(file);
+  }
+
+  /* ------------------------------------------------- simulation extras */
+
+  function applyPack(p, quiet) {
+    state.pack = p;
+    try { localStorage.setItem('sss-pack', p.id); } catch {}
+    document.querySelectorAll('#pack-list .pack-row').forEach(el => {
+      el.classList.toggle('on', el.dataset.pack === p.id);
+    });
+    if (!quiet) {
+      Sfx.tick();
+      toast(`Texture pack: ${p.name}`);
+    }
+  }
+
+  function renderPacks() {
+    const list = $('pack-list');
+    list.innerHTML = '';
+    for (const p of PACKS) {
+      const row = document.createElement('button');
+      row.className = 'pack-row' + (p.id === state.pack.id ? ' on' : '');
+      row.dataset.pack = p.id;
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = p.tint || 'transparent';
+      const txt = document.createElement('span');
+      const nm = document.createElement('strong');
+      nm.textContent = p.name;
+      const de = document.createElement('small');
+      de.textContent = p.desc;
+      txt.appendChild(nm); txt.appendChild(de);
+      row.appendChild(sw); row.appendChild(txt);
+      row.addEventListener('click', () => applyPack(p));
+      list.appendChild(row);
+    }
+  }
+
+  /* Rebuild the auto-track / separation dropdowns only when the body set
+   * changes, so open dropdowns are never clobbered mid-interaction. */
+  function syncBodySelects() {
+    const sim = state.sim;
+    const sig = sim.bodies.map(b => b.id).join(',');
+    if (sig !== state.selectsSig) {
+      state.selectsSig = sig;
+      const byName = n => sim.bodies.find(b => b.name === n);
+
+      const track = $('track-sel');
+      track.innerHTML = '';
+      const free = document.createElement('option');
+      free.value = ''; free.textContent = 'Free camera';
+      track.appendChild(free);
+      for (const b of sim.bodies) {
+        const o = document.createElement('option');
+        o.value = String(b.id); o.textContent = b.name;
+        track.appendChild(o);
+      }
+
+      for (const [id, which] of [['sep-a', 'sepA'], ['sep-b', 'sepB']]) {
+        const sel = $(id);
+        sel.innerHTML = '';
+        for (const b of sim.bodies) {
+          const o = document.createElement('option');
+          o.value = String(b.id); o.textContent = b.name;
+          sel.appendChild(o);
+        }
+        const cur = state[which];
+        const alive = cur != null && sim.bodies.some(b => String(b.id) === String(cur));
+        if (!alive) {
+          const def = which === 'sepA' ? byName('Earth') || sim.bodies[0] : byName('Saturn') || sim.bodies[1] || sim.bodies[0];
+          state[which] = def ? String(def.id) : null;
+        }
+        if (state[which] != null) sel.value = String(state[which]);
+      }
+    }
+    if (document.activeElement !== $('track-sel')) {
+      $('track-sel').value = state.cam.followId != null ? String(state.cam.followId) : '';
+    }
+  }
+
+  function updateSepReadout() {
+    const a = state.sim.byId.get(Number(state.sepA));
+    const b = state.sim.byId.get(Number(state.sepB));
+    const out = $('sep-out');
+    if (!a || !b || a === b) { out.textContent = '—'; return; }
+    const pa = state.sim.bodyPos(a, state.sim.jd);
+    const pb = state.sim.bodyPos(b, state.sim.jd);
+    const au = Math.hypot(pa[0] - pb[0], pa[1] - pb[1], (pa[2] || 0) - (pb[2] || 0));
+    out.textContent = `${fmtNumber(au, 'AU')} · ${fmtNumber(au * AU_KM, 'km')}`;
+  }
+
+  function setDateFromInputs() {
+    const y = parseInt($('date-y').value, 10);
+    const m = parseInt($('date-m').value, 10);
+    const d = parseInt($('date-d').value, 10);
+    if (!(y >= 1800 && y <= 2050 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) {
+      toast('Date out of range (1800–2050)', 'warn');
+      return;
+    }
+    const ms = Date.UTC(y, m - 1, d);
+    const dt = new Date(ms);
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+      toast('That date does not exist', 'warn');
+      return;
+    }
+    state.sim.jd = ms / DAY_MS + 2440587.5;
+    Sfx.tick();
+    toast(`Epoch set to ${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+  }
+
+  function spawnSmall(kind) {
+    const sim = state.sim;
+    let mCentral = 0;
+    for (const b of sim.bodies) if (b.kind === 'star') mCentral += b.massKg / MSUN_KG;
+    if (mCentral === 0) mCentral = 1;
+    const dist = kind === 'asteroid' ? 1.3 + Math.random() * 1.5 : 3.5 + Math.random() * 2.5;
+    const ang = Math.random() * TAU;
+    const vCirc = Math.sqrt(K2 * mCentral / dist);
+    const vMul = kind === 'asteroid' ? 0.95 + Math.random() * 0.1 : 0.4 + Math.random() * 0.15;
+    const def = BODY_TYPES.find(t => t.id === kind);
+    sim.addCustom({
+      kind,
+      massEarth: def.massEarth,
+      radiusKm: def.radiusKm,
+      color: def.color,
+      posAU: [dist * Math.cos(ang), dist * Math.sin(ang), 0],
+      velAUd: [-vCirc * Math.sin(ang) * vMul, vCirc * Math.cos(ang) * vMul, 0],
+    });
+  }
+
+  function initSimExtras() {
+    // view switches
+    $('view-chips').addEventListener('click', (e) => {
+      const chip = e.target.closest && e.target.closest('.chip');
+      if (!chip) return;
+      const key = chip.dataset.view;
+      state.view[key] = !state.view[key];
+      chip.classList.toggle('on', state.view[key]);
+      Sfx.tick();
+    });
+
+    // start date
+    const today = new Date();
+    $('date-y').value = today.getUTCFullYear();
+    $('date-m').value = today.getUTCMonth() + 1;
+    $('date-d').value = today.getUTCDate();
+    $('btn-set-date').addEventListener('click', setDateFromInputs);
+
+    // auto-track + separation
+    $('track-sel').addEventListener('change', (e) => {
+      state.cam.followId = e.target.value === '' ? null : Number(e.target.value);
+      Sfx.tick();
+    });
+    $('sep-a').addEventListener('change', (e) => { state.sepA = e.target.value; updateSepReadout(); });
+    $('sep-b').addEventListener('change', (e) => { state.sepB = e.target.value; updateSepReadout(); });
+
+    // quick actions
+    $('qa-asteroid').addEventListener('click', () => { spawnSmall('asteroid'); Sfx.add(); });
+    $('qa-comet').addEventListener('click', () => { spawnSmall('comet'); Sfx.add(); });
+    $('qa-trails').addEventListener('click', () => {
+      for (const b of state.sim.bodies) b.trail.length = 0;
+      Sfx.tick();
+      toast('Trails cleared');
+    });
+    $('qa-empty').addEventListener('click', () => {
+      loadScenarioNamed('empty', 'Empty Sandbox');
+      toast('Empty sky — build your own system');
+    });
+
+    // texture pack restore
+    let savedPack = null;
+    try { savedPack = localStorage.getItem('sss-pack'); } catch {}
+    applyPack(PACKS.find(p => p.id === savedPack) || PACKS[0], true);
+    renderPacks();
   }
 
   /* ------------------------------------------------------- volume ui */
@@ -2230,7 +2576,7 @@ const Sfx = (() => {
       loadScenarioNamed(e.target.value, e.target.selectedOptions[0].text);
       toast(`${e.target.selectedOptions[0].text} loaded`);
     });
-    $('btn-gravity').addEventListener('click', () => {
+    $('gravity-chip').addEventListener('click', () => {
       state.sim.releaseToNBody();
       syncGravityChip();
       Sfx.gravity();
@@ -2396,7 +2742,11 @@ const Sfx = (() => {
       const dyn = state.sim.bodies.filter(b => b.state).length;
       $('status-count').textContent = `${state.sim.bodies.length} bodies`;
       $('status-mode').textContent = state.sim.mode === 'rails' ? 'ephemeris rails' : 'live gravity';
-      if (state.tab === 'inspect') renderInspector();
+      if (state.tab === 'inspect') {
+        renderInspector();
+        syncBodySelects();
+        updateSepReadout();
+      }
       if (state.tab === 'library') renderLibraryCurrent();
     }
     $('status-fps').textContent = Math.round(state.fps) + ' fps';
@@ -2440,6 +2790,7 @@ const Sfx = (() => {
 
     bindEvents();
     initVolumeUi();
+    initSimExtras();
     switchTab('inspect');
     requestAnimationFrame(frame);
 

@@ -238,6 +238,60 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
 .part-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; padding: 5px 10px; }
 .part-chip .dot { width: 9px; height: 9px; border-radius: 50%; }
 
+/* simulation extras (bottom of the inspect panel) */
+.sim-extra {
+  border-top: 1px solid var(--line);
+  margin-top: 16px; padding-top: 6px;
+}
+.sim-block { margin: 10px 0 2px; }
+.sim-block > label, .ctl > .row > label {
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+}
+.date-row { display: flex; gap: 6px; margin-top: 6px; }
+.date-row input {
+  width: 100%; min-width: 0; font: 600 12px Consolas, ui-monospace, monospace;
+  color: var(--text); background: var(--chip);
+  border: 1px solid var(--line); border-radius: 8px; padding: 7px 6px; text-align: center;
+}
+.date-row input:first-child { flex: 1.6; }
+.date-row input { flex: 1; }
+.date-row button { flex: none; font-size: 11px; padding: 6px 10px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.chip-row .chip { font-size: 11.5px; padding: 5px 10px; border-radius: 999px; }
+.chip-row .chip.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+#track-sel, .sep-row select { width: 100%; margin-top: 6px; }
+.sep-row { display: flex; align-items: center; gap: 6px; }
+.sep-row span { color: var(--faint); }
+#sep-out {
+  display: block; margin-top: 7px;
+  font: 600 12px Consolas, ui-monospace, monospace; color: var(--accent-2);
+}
+.quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 6px; }
+.quick-grid button { font-size: 12px; padding: 8px 4px; }
+
+/* satellites list */
+#insp-sats { margin: 10px 0 4px; }
+#insp-sats .sat-head {
+  display: flex; justify-content: space-between;
+  font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint);
+}
+#insp-sats .sat-row {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; text-align: left; margin-top: 5px; padding: 6px 9px; font-size: 12px;
+}
+#insp-sats .sat-row .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+#insp-sats .sat-row small { color: var(--muted); font-family: Consolas, ui-monospace, monospace; }
+
+/* texture packs */
+#pack-list { display: grid; gap: 7px; margin-top: 8px; }
+.pack-row { display: flex; align-items: center; gap: 10px; text-align: left; }
+.pack-row .swatch { width: 14px; height: 14px; border-radius: 4px; flex: none; border: 1px solid var(--line-2); }
+.pack-row strong { font-size: 12.5px; display: block; }
+.pack-row small { color: var(--muted); font-size: 11px; }
+.pack-row.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.pack-row.on small { color: var(--accent-text); opacity: .8; }
+.pack-row.on .swatch { border-color: rgba(255,255,255,.7); }
+
 /* library tab */
 #library-current { font: 11px Consolas, ui-monospace, monospace; color: var(--muted); margin: 4px 0 12px; }
 #preset-grid { display: grid; gap: 8px; }

@@ -42,11 +42,20 @@ function makeEl(id) {
 }
 
 const els = new Map();
+// Faithful DOM: only IDs that actually exist in index.html resolve; anything
+// else returns null exactly like a browser, so phantom element references
+// crash the harness instead of hiding until real users hit them.
+const fsForIds = require('fs');
+const htmlSrc = fsForIds.existsSync('index.html')
+  ? fsForIds.readFileSync('index.html', 'utf8')
+  : '';
+const REAL_IDS = new Set([...htmlSrc.matchAll(/id="([^"]+)"/g)].map(m => m[1]));
 const documentStub = {
   readyState: 'complete',
   documentElement: { dataset: {} },
   body: makeEl('body'),
   getElementById(id) {
+    if (!REAL_IDS.has(id)) return null;
     if (!els.has(id)) els.set(id, makeEl(id));
     return els.get(id);
   },
@@ -218,6 +227,26 @@ els.get('btn-mute').dispatch('click');
 els.get('vol-slider').dispatch('input', { target: els.get('vol-slider') });
 els.get('vol-ambient').dispatch('change', { target: els.get('vol-ambient') });
 check(true, 'volume UI interactions do not throw');
+
+/* ----------------------------------------------- simulation extras checks -- */
+sss.setType('terrestrial');
+els.get('qa-asteroid').dispatch('click');
+const ast = sim.bodies[sim.bodies.length - 1];
+check(sim.bodies.some(b => b.kind === 'asteroid'), 'quick action: spawn asteroid');
+els.get('qa-comet').dispatch('click');
+check(sim.bodies.some(b => b.kind === 'comet'), 'quick action: spawn comet');
+els.get('qa-trails').dispatch('click');
+check(sim.bodies.every(b => b.trail.length === 0), 'quick action: clear trails');
+els.get('btn-set-date').dispatch('click');
+check(true, 'start-date set does not throw');
+els.get('track-sel').dispatch('change', { target: els.get('track-sel') });
+els.get('sep-a').dispatch('change', { target: els.get('sep-a') });
+els.get('sep-b').dispatch('change', { target: els.get('sep-b') });
+check(true, 'track + separation selects do not throw');
+els.get('view-chips').dispatch('click', { target: els.get('view-chips') });
+check(true, 'view chips do not throw');
+const frame = () => { let t = performance.now(); t += 16; if (rafCb) { const cb = rafCb; rafCb = null; cb(t); } };
+for (let i = 0; i < 3; i++) frame();
 
 console.log(failures ? `\nFAILED (${failures})` : '\nALL SMOKE TESTS PASSED');
 process.exit(failures ? 1 : 0);

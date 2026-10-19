@@ -17,6 +17,10 @@
     drag: null,           // {ax,ay} world coords while dragging a spawn vector
     fps: 60,
     tab: 'inspect',
+    view: { labels: true, orbits: true, moons: true, trails: true },
+    pack: PACKS[0],
+    sepA: null, sepB: null,
+    selectsSig: null,
     starfield: null,
     starfieldKey: '',
   };
@@ -137,6 +141,7 @@
     const pal = state.theme.canvas;
     ctx.beginPath();
     if (b.parentKey) {
+      if (!state.view.moons) return;
       const parent = state.sim.bodies.find(x => x.catalog === b.parentKey);
       if (!parent) return;
       const [px, py] = worldToScreen(...state.sim.bodyPos(parent, state.sim.jd));
@@ -144,6 +149,7 @@
       if (r * 2 > 6) { ctx.strokeStyle = pal.moonOrbit; ctx.arc(px, py, r, 0, TAU); ctx.stroke(); }
       return;
     }
+    if (!state.view.orbits) return;
     if (!b.elemKey && !b.railKey) return;
     const el = elementsAt(PLANET_ELEMENTS[b.elemKey || b.railKey], T);
     const cw = Math.cos(el.w - el.O), sw = Math.sin(el.w - el.O);
@@ -298,20 +304,21 @@
     for (const b of sim.bodies) drawOrbitFor(b);
 
     // trails
-    for (const b of sim.bodies) if (b.state) drawTrail(b);
+    if (state.view.trails) for (const b of sim.bodies) if (b.state) drawTrail(b);
 
     // bodies + labels
     ctx.font = '11px "Segoe UI", system-ui, sans-serif';
     let hoverChip = null;
     for (const b of sim.bodies) {
+      if (!state.view.moons && b.kind === 'moon') continue;
       const p = sim.bodyPos(b, sim.jd);
       const [sx, sy] = worldToScreen(p[0], p[1]);
       const r = bodyScreenRadius(b);
       if (sx < -80 || sy < -80 || sx > w + 80 || sy > h + 80) continue;
       drawBody(b, sx, sy, r);
-      const showLabel = b.kind === 'moon'
+      const showLabel = state.view.labels && (b.kind === 'moon'
         ? r > 2.5 || state.cam.ppAU / b.aAU > 300
-        : true;
+        : true);
       if (showLabel && (b.kind !== 'moon' || state.cam.ppAU * b.aAU < 400)) {
         ctx.fillStyle = pal.label;
         ctx.fillText(b.name, sx + r + 5, sy - r - 3);
@@ -339,6 +346,16 @@
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(state.mouse.x, state.mouse.y); ctx.stroke();
       ctx.fillStyle = pal.select;
       ctx.beginPath(); ctx.arc(ax, ay, 4, 0, TAU); ctx.fill();
+    }
+
+    // texture pack tint
+    if (state.pack.tint && !pal.flat) {
+      ctx.save();
+      ctx.globalCompositeOperation = state.pack.blend || 'soft-light';
+      ctx.globalAlpha = state.pack.strength;
+      ctx.fillStyle = state.pack.tint;
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
     }
 
     // vignette
@@ -432,6 +449,40 @@
     $('btn-remove').style.display = canRemove(b) ? 'block' : 'none';
     $('btn-release').style.display = state.sim.mode === 'rails' ? 'block' : 'none';
     $('btn-follow').textContent = state.cam.followId === b.id ? '◉ Following' : '👁 Follow';
+
+    // satellites: catalogue moons orbiting the selected planet
+    const satsEl = $('insp-sats');
+    const moons = b.catalog ? CATALOG.filter(c => c.parent === b.catalog) : [];
+    satsEl.innerHTML = '';
+    if (moons.length) {
+      satsEl.style.display = 'block';
+      const head = document.createElement('div');
+      head.className = 'sat-head';
+      const hl = document.createElement('span');
+      hl.textContent = 'Satellites';
+      const hr = document.createElement('span');
+      hr.textContent = moons.length + (moons.length === 1 ? ' moon' : ' moons');
+      head.appendChild(hl); head.appendChild(hr);
+      satsEl.appendChild(head);
+      for (const s of moons) {
+        const row = document.createElement('button');
+        row.className = 'sat-row';
+        const left = document.createElement('span');
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        dot.style.background = s.color;
+        left.appendChild(dot);
+        left.appendChild(document.createTextNode(s.name));
+        const right = document.createElement('small');
+        right.textContent = fmtNumber(s.aAU * AU_KM, 'km');
+        row.appendChild(left); row.appendChild(right);
+        row.addEventListener('click', () => {
+          const target = state.sim.bodies.find(x => x.catalog === s.key);
+          if (target) { state.selectedId = target.id; Sfx.select(); renderInspector(); }
+        });
+        satsEl.appendChild(row);
+      }
+    }
   }
 
   function canRemove(b) {
@@ -486,7 +537,6 @@
     const live = state.sim.mode === 'nbody';
     $('gravity-chip').textContent = live ? 'Gravity: live' : 'Gravity: rails';
     $('gravity-chip').classList.toggle('on', live);
-    $('btn-gravity').classList.toggle('on', live);
   }
 
   function loadScenarioNamed(id, label) {
@@ -529,6 +579,7 @@
   /* ---------------------------------------------------------- library tab */
 
   function renderLibrary() {
+    renderPacks();
     const grid = $('preset-grid');
     grid.innerHTML = '';
     for (const p of PRESETS) {
@@ -589,6 +640,180 @@
       } catch { toast('Could not read that file', 'warn'); }
     };
     fr.readAsText(file);
+  }
+
+  /* ------------------------------------------------- simulation extras */
+
+  function applyPack(p, quiet) {
+    state.pack = p;
+    try { localStorage.setItem('sss-pack', p.id); } catch {}
+    document.querySelectorAll('#pack-list .pack-row').forEach(el => {
+      el.classList.toggle('on', el.dataset.pack === p.id);
+    });
+    if (!quiet) {
+      Sfx.tick();
+      toast(`Texture pack: ${p.name}`);
+    }
+  }
+
+  function renderPacks() {
+    const list = $('pack-list');
+    list.innerHTML = '';
+    for (const p of PACKS) {
+      const row = document.createElement('button');
+      row.className = 'pack-row' + (p.id === state.pack.id ? ' on' : '');
+      row.dataset.pack = p.id;
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = p.tint || 'transparent';
+      const txt = document.createElement('span');
+      const nm = document.createElement('strong');
+      nm.textContent = p.name;
+      const de = document.createElement('small');
+      de.textContent = p.desc;
+      txt.appendChild(nm); txt.appendChild(de);
+      row.appendChild(sw); row.appendChild(txt);
+      row.addEventListener('click', () => applyPack(p));
+      list.appendChild(row);
+    }
+  }
+
+  /* Rebuild the auto-track / separation dropdowns only when the body set
+   * changes, so open dropdowns are never clobbered mid-interaction. */
+  function syncBodySelects() {
+    const sim = state.sim;
+    const sig = sim.bodies.map(b => b.id).join(',');
+    if (sig !== state.selectsSig) {
+      state.selectsSig = sig;
+      const byName = n => sim.bodies.find(b => b.name === n);
+
+      const track = $('track-sel');
+      track.innerHTML = '';
+      const free = document.createElement('option');
+      free.value = ''; free.textContent = 'Free camera';
+      track.appendChild(free);
+      for (const b of sim.bodies) {
+        const o = document.createElement('option');
+        o.value = String(b.id); o.textContent = b.name;
+        track.appendChild(o);
+      }
+
+      for (const [id, which] of [['sep-a', 'sepA'], ['sep-b', 'sepB']]) {
+        const sel = $(id);
+        sel.innerHTML = '';
+        for (const b of sim.bodies) {
+          const o = document.createElement('option');
+          o.value = String(b.id); o.textContent = b.name;
+          sel.appendChild(o);
+        }
+        const cur = state[which];
+        const alive = cur != null && sim.bodies.some(b => String(b.id) === String(cur));
+        if (!alive) {
+          const def = which === 'sepA' ? byName('Earth') || sim.bodies[0] : byName('Saturn') || sim.bodies[1] || sim.bodies[0];
+          state[which] = def ? String(def.id) : null;
+        }
+        if (state[which] != null) sel.value = String(state[which]);
+      }
+    }
+    if (document.activeElement !== $('track-sel')) {
+      $('track-sel').value = state.cam.followId != null ? String(state.cam.followId) : '';
+    }
+  }
+
+  function updateSepReadout() {
+    const a = state.sim.byId.get(Number(state.sepA));
+    const b = state.sim.byId.get(Number(state.sepB));
+    const out = $('sep-out');
+    if (!a || !b || a === b) { out.textContent = '—'; return; }
+    const pa = state.sim.bodyPos(a, state.sim.jd);
+    const pb = state.sim.bodyPos(b, state.sim.jd);
+    const au = Math.hypot(pa[0] - pb[0], pa[1] - pb[1], (pa[2] || 0) - (pb[2] || 0));
+    out.textContent = `${fmtNumber(au, 'AU')} · ${fmtNumber(au * AU_KM, 'km')}`;
+  }
+
+  function setDateFromInputs() {
+    const y = parseInt($('date-y').value, 10);
+    const m = parseInt($('date-m').value, 10);
+    const d = parseInt($('date-d').value, 10);
+    if (!(y >= 1800 && y <= 2050 && m >= 1 && m <= 12 && d >= 1 && d <= 31)) {
+      toast('Date out of range (1800–2050)', 'warn');
+      return;
+    }
+    const ms = Date.UTC(y, m - 1, d);
+    const dt = new Date(ms);
+    if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) {
+      toast('That date does not exist', 'warn');
+      return;
+    }
+    state.sim.jd = ms / DAY_MS + 2440587.5;
+    Sfx.tick();
+    toast(`Epoch set to ${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`);
+  }
+
+  function spawnSmall(kind) {
+    const sim = state.sim;
+    let mCentral = 0;
+    for (const b of sim.bodies) if (b.kind === 'star') mCentral += b.massKg / MSUN_KG;
+    if (mCentral === 0) mCentral = 1;
+    const dist = kind === 'asteroid' ? 1.3 + Math.random() * 1.5 : 3.5 + Math.random() * 2.5;
+    const ang = Math.random() * TAU;
+    const vCirc = Math.sqrt(K2 * mCentral / dist);
+    const vMul = kind === 'asteroid' ? 0.95 + Math.random() * 0.1 : 0.4 + Math.random() * 0.15;
+    const def = BODY_TYPES.find(t => t.id === kind);
+    sim.addCustom({
+      kind,
+      massEarth: def.massEarth,
+      radiusKm: def.radiusKm,
+      color: def.color,
+      posAU: [dist * Math.cos(ang), dist * Math.sin(ang), 0],
+      velAUd: [-vCirc * Math.sin(ang) * vMul, vCirc * Math.cos(ang) * vMul, 0],
+    });
+  }
+
+  function initSimExtras() {
+    // view switches
+    $('view-chips').addEventListener('click', (e) => {
+      const chip = e.target.closest && e.target.closest('.chip');
+      if (!chip) return;
+      const key = chip.dataset.view;
+      state.view[key] = !state.view[key];
+      chip.classList.toggle('on', state.view[key]);
+      Sfx.tick();
+    });
+
+    // start date
+    const today = new Date();
+    $('date-y').value = today.getUTCFullYear();
+    $('date-m').value = today.getUTCMonth() + 1;
+    $('date-d').value = today.getUTCDate();
+    $('btn-set-date').addEventListener('click', setDateFromInputs);
+
+    // auto-track + separation
+    $('track-sel').addEventListener('change', (e) => {
+      state.cam.followId = e.target.value === '' ? null : Number(e.target.value);
+      Sfx.tick();
+    });
+    $('sep-a').addEventListener('change', (e) => { state.sepA = e.target.value; updateSepReadout(); });
+    $('sep-b').addEventListener('change', (e) => { state.sepB = e.target.value; updateSepReadout(); });
+
+    // quick actions
+    $('qa-asteroid').addEventListener('click', () => { spawnSmall('asteroid'); Sfx.add(); });
+    $('qa-comet').addEventListener('click', () => { spawnSmall('comet'); Sfx.add(); });
+    $('qa-trails').addEventListener('click', () => {
+      for (const b of state.sim.bodies) b.trail.length = 0;
+      Sfx.tick();
+      toast('Trails cleared');
+    });
+    $('qa-empty').addEventListener('click', () => {
+      loadScenarioNamed('empty', 'Empty Sandbox');
+      toast('Empty sky — build your own system');
+    });
+
+    // texture pack restore
+    let savedPack = null;
+    try { savedPack = localStorage.getItem('sss-pack'); } catch {}
+    applyPack(PACKS.find(p => p.id === savedPack) || PACKS[0], true);
+    renderPacks();
   }
 
   /* ------------------------------------------------------- volume ui */
@@ -798,7 +1023,7 @@
       loadScenarioNamed(e.target.value, e.target.selectedOptions[0].text);
       toast(`${e.target.selectedOptions[0].text} loaded`);
     });
-    $('btn-gravity').addEventListener('click', () => {
+    $('gravity-chip').addEventListener('click', () => {
       state.sim.releaseToNBody();
       syncGravityChip();
       Sfx.gravity();
@@ -964,7 +1189,11 @@
       const dyn = state.sim.bodies.filter(b => b.state).length;
       $('status-count').textContent = `${state.sim.bodies.length} bodies`;
       $('status-mode').textContent = state.sim.mode === 'rails' ? 'ephemeris rails' : 'live gravity';
-      if (state.tab === 'inspect') renderInspector();
+      if (state.tab === 'inspect') {
+        renderInspector();
+        syncBodySelects();
+        updateSepReadout();
+      }
       if (state.tab === 'library') renderLibraryCurrent();
     }
     $('status-fps').textContent = Math.round(state.fps) + ' fps';
@@ -1008,6 +1237,7 @@
 
     bindEvents();
     initVolumeUi();
+    initSimExtras();
     switchTab('inspect');
     requestAnimationFrame(frame);
 
