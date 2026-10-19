@@ -95,6 +95,15 @@ body {
   height: 100vh;
 }
 
+#boot-error {
+  position: fixed; left: 50%; bottom: 46px; transform: translateX(-50%);
+  z-index: 99; max-width: min(560px, 90vw);
+  background: #3a1210; color: #ffb4a8;
+  border: 1px solid #ff7a6e; border-radius: 10px;
+  padding: 10px 16px; font-size: 12.5px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.5);
+}
+
 /* ------------------------------------------------------------- top bar */
 
 #topbar {
@@ -376,6 +385,27 @@ input[type='color'] { padding: 2px 4px; height: 34px; }
 </style>
 </head>
 <body>
+<div id="boot-error" hidden></div>
+<script>
+/* Visible diagnostics: a crashed boot must never be a silent black page. */
+(function () {
+  var box = document.getElementById('boot-error');
+  function show(msg) {
+    if (!box) return;
+    box.hidden = false;
+    box.textContent = msg;
+  }
+  window.addEventListener('error', function (e) {
+    show('Script error: ' + (e.message || 'unknown') + ' — hard-refresh (Ctrl+Shift+R)');
+  });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      if (!window.__sss) show('The simulator did not finish loading — you may be running a cached copy. Hard-refresh (Ctrl+Shift+R).');
+    }, 2500);
+  });
+})();
+</script>
+
 <div id="app">
 
   <header id="topbar">

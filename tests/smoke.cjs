@@ -91,6 +91,19 @@ const sss = global.__sss;
 if (!sss) throw new Error('boot failed: no __sss hook');
 const { sim } = sss;
 
+/* ------------------------------------------------------ element-id audit -- */
+/* Every $('id') reference in the loaded scripts must exist in index.html. */
+{
+  const referenced = new Set();
+  for (const file of process.argv.slice(2)) {
+    const text = fs.readFileSync(file, 'utf8');
+    for (const m of text.matchAll(/\$\('([a-zA-Z0-9_-]+)'\)/g)) referenced.add(m[1]);
+  }
+  const phantom = [...referenced].filter(id => !REAL_IDS.has(id));
+  check(phantom.length === 0,
+    phantom.length ? `PHANTOM element ids: ${phantom.join(', ')}` : `all ${referenced.size} referenced element ids exist in index.html`);
+}
+
 let failures = 0;
 function check(cond, label) {
   console.log((cond ? '  ok    ' : '  FAIL  ') + label);

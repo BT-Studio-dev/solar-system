@@ -32,17 +32,18 @@ FAVICON = ("data:image/svg+xml,"
 
 single = html.replace('<link rel="icon" href="assets/icon.ico" sizes="any">',
                       f'<link rel="icon" href="{FAVICON}">')
-single = single.replace('<link rel="stylesheet" href="css/style.css">',
-                        '<style>\n' + css + '\n</style>')
+# tolerate an optional ?v= cache-bust query on the stylesheet link
+single = re.sub(r'<link rel="stylesheet" href="css/style\.css(?:\?[^"]*)?">',
+                '<style>\n' + css + '\n</style>', single, count=1)
 
-# inline every local script tag, in order
-script_tags = re.findall(r'<script src="(js/[^"]+)"></script>', single)
+# inline every local script tag (with optional ?v= cache-bust query), in order
+script_tags = re.findall(r'<script src="(js/[^"?]+)(?:\?[^"]*)?"></script>', single)
 assert script_tags, 'no local scripts found'
 for tag_path in script_tags:
     code = open(tag_path).read()
-    tag = f'<script src="{tag_path}"></script>'
-    assert tag in single, tag
-    single = single.replace(tag, '<script>\n' + code + '\n</script>')
+    tag_match = re.search(r'<script src="' + re.escape(tag_path) + r'(?:\?[^"]*)?"></script>', single)
+    assert tag_match, tag_path
+    single = single[:tag_match.start()] + '<script>\n' + code + '\n</script>' + single[tag_match.end():]
 
 banner = (f'<!--\n  Solar System Sandbox v{version} — STANDALONE SINGLE-FILE BUILD\n'
           '  The complete simulator in one file: open anywhere, works offline.\n'
@@ -58,6 +59,8 @@ print(f'wrote {game_out} ({len(single) // 1024} KB)')
 assert 'rel="stylesheet"' not in single
 assert '<script src="js/' not in single
 assert css in single
+# the boot-error watcher script must survive inlining (5 inline scripts total)
+assert single.count('<script>') == 5, single.count('<script>')
 
 zip_out = f'dist/SolarSystemSandbox-{version}-site.zip'
 members = ['index.html', 'css/style.css', 'js/data.js', 'js/sim.js', 'js/audio.js',

@@ -7,9 +7,30 @@
 <meta name="description" content="A real-time solar system simulator and N-body gravity sandbox in your browser: JPL approximate ephemerides, five colour themes, drop-in scenario files.">
 <meta name="theme-color" content="#0b111f">
 <link rel="icon" href="assets/icon.ico" sizes="any">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=1.0.0">
 </head>
 <body>
+<div id="boot-error" hidden></div>
+<script>
+/* Visible diagnostics: a crashed boot must never be a silent black page. */
+(function () {
+  var box = document.getElementById('boot-error');
+  function show(msg) {
+    if (!box) return;
+    box.hidden = false;
+    box.textContent = msg;
+  }
+  window.addEventListener('error', function (e) {
+    show('Script error: ' + (e.message || 'unknown') + ' — hard-refresh (Ctrl+Shift+R)');
+  });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      if (!window.__sss) show('The simulator did not finish loading — you may be running a cached copy. Hard-refresh (Ctrl+Shift+R).');
+    }, 2500);
+  });
+})();
+</script>
+
 <div id="app">
 
   <header id="topbar">
@@ -273,9 +294,9 @@
   </div>
 </div>
 
-<script src="js/data.js"></script>
-<script src="js/sim.js"></script>
-<script src="js/audio.js"></script>
-<script src="js/main.js"></script>
+<script src="js/data.js?v=1.0.0"></script>
+<script src="js/sim.js?v=1.0.0"></script>
+<script src="js/audio.js?v=1.0.0"></script>
+<script src="js/main.js?v=1.0.0"></script>
 </body>
 </html>

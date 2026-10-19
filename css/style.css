@@ -79,6 +79,15 @@ body {
   height: 100vh;
 }
 
+#boot-error {
+  position: fixed; left: 50%; bottom: 46px; transform: translateX(-50%);
+  z-index: 99; max-width: min(560px, 90vw);
+  background: #3a1210; color: #ffb4a8;
+  border: 1px solid #ff7a6e; border-radius: 10px;
+  padding: 10px 16px; font-size: 12.5px;
+  box-shadow: 0 12px 30px rgba(0,0,0,.5);
+}
+
 /* ------------------------------------------------------------- top bar */
 
 #topbar {
