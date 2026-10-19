@@ -1,0 +1,7 @@
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# local scratch
+*.log
+tmp/

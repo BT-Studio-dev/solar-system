@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en" data-theme="aero-night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solar System Sandbox</title>
+<meta name="description" content="A real-time solar system simulator and N-body gravity sandbox in your browser: JPL approximate ephemerides, five colour themes, drop-in scenario files.">
+<meta name="theme-color" content="#0b111f">
+<link rel="icon" href="assets/icon.ico" sizes="any">
+<link rel="stylesheet" href="css/style.css?v=1.0.1">
+</head>
+<body>
+<div id="boot-error" hidden></div>
+<script>
+/* Visible diagnostics: a crashed boot must never be a silent black page. */
+(function () {
+  var box = document.getElementById('boot-error');
+  function show(msg) {
+    if (!box) return;
+    box.hidden = false;
+    box.textContent = msg;
+  }
+  window.addEventListener('error', function (e) {
+    var where = e.filename ? (e.filename.split('/').pop() + ':' + e.lineno) : '';
+    var stack = e.error && e.error.stack ? ('\n' + String(e.error.stack).split('\n').slice(0, 3).join('\n')) : '';
+    show('Script error' + (where ? ' @ ' + where : '') + ': ' + (e.message || 'unknown') +
+         ' — hard-refresh (Ctrl+Shift+R)' + stack);
+    box.style.whiteSpace = 'pre-wrap';
+  });
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      if (!window.__sss) show('The simulator did not finish loading — you may be running a cached copy. Hard-refresh (Ctrl+Shift+R).');
+    }, 2500);
+  });
+})();
+</script>
+
+<div id="app">
+
+  <header id="topbar">
+    <div class="brand">
+      <strong>Solar System Sandbox</strong>
+      <small>Simulator</small>
+    </div>
+
+    <div class="group">
+      <button id="btn-play" class="icon" title="Play / pause (Space)">❚❚</button>
+      <div>
+        <label for="speed">Speed</label>
+        <input type="range" id="speed" min="0" max="1000" value="600">
+      </div>
+      <output id="speed-out">1.00 day/s</output>
+    </div>
+
+    <div class="group">
+      <label>Epoch (UTC)</label>
+      <span id="epoch">—</span>
+      <button id="btn-now" title="Jump to the current date">NOW</button>
+    </div>
+
+    <div class="group">
+      <label for="scenario">Scenario</label>
+      <select id="scenario"></select>
+    </div>
+
+    <div class="spacer"></div>
+
+    <div class="group vol-wrap">
+      <button id="btn-volume" class="icon" title="Sound (M)">&#128266;</button>
+      <div id="vol-pop" hidden>
+        <div class="vol-row">
+          <button id="btn-mute" class="icon" title="Mute / unmute (M)">&#128266;</button>
+          <input type="range" id="vol-slider" min="0" max="100" step="1" value="70" title="Master volume">
+          <output id="vol-out">70%</output>
+        </div>
+        <label class="vol-amb"><input type="checkbox" id="vol-ambient"> Ambient space hum</label>
+      </div>
+    </div>
+
+    <div class="group">
+      <span id="gravity-chip" title="Release the planets from their ephemeris rails and let everything pull on everything">Gravity: rails</span>
+      <button id="btn-theme" class="icon" title="Cycle colour theme (T)">◐</button>
+      <span id="theme-label" class="theme-label">Aero Night</span>
+      <button id="btn-help" class="icon" title="Help">?</button>
+    </div>
+  </header>
+
+  <div id="main">
+    <div id="stage">
+      <canvas id="view"></canvas>
+      <div id="hover-chip"><span id="hover-name"></span><span id="hover-info"></span></div>
+      <div id="toasts"></div>
+    </div>
+
+    <aside id="inspector">
+      <nav class="tabs">
+        <button id="tab-inspect" class="on">Inspect</button>
+        <button id="tab-create">Create</button>
+        <button id="tab-library">Library</button>
+      </nav>
+
+      <section class="panel" id="panel-inspect">
+        <div id="insp-empty">
+          <span class="big">◍</span>
+          Click a body in the sky — or double-click to follow it.<br>
+          Nothing selected yet.
+        </div>
+        <div id="insp-body" style="display:none">
+          <div id="insp-head">
+            <span id="insp-dot"></span>
+            <h2 id="insp-name">—</h2>
+          </div>
+          <span id="insp-kind">—</span>
+
+          <div class="facts">
+            <div class="fact"><small>Distance from star</small><b id="insp-dist">—</b></div>
+            <div class="fact"><small>Orbital period</small><b id="insp-period">—</b></div>
+            <div class="fact"><small>Speed</small><b id="insp-speed">—</b></div>
+            <div class="fact"><small>Radius</small><b id="insp-radius">—</b></div>
+            <div class="fact"><small>Mass</small><b id="insp-mass">—</b></div>
+            <div class="fact"><small>Rotation</small><b id="insp-rot">—</b></div>
+          </div>
+
+          <div class="actions">
+            <button id="btn-focus">◎ Focus</button>
+            <button id="btn-follow">👁 Follow</button>
+            <button id="btn-release">⛓ Release to gravity</button>
+            <button id="btn-remove" class="danger">🗑 Remove</button>
+          </div>
+
+          <p id="insp-desc"></p>
+          <div id="insp-extra"></div>
+          <div id="insp-sats"></div>
+        </div>
+
+        <section class="sim-extra">
+          <div class="sim-block">
+            <label>Start date</label>
+            <div class="date-row">
+              <input type="number" id="date-y" min="1800" max="2050" value="2026" aria-label="year">
+              <input type="number" id="date-m" min="1" max="12" value="1" aria-label="month">
+              <input type="number" id="date-d" min="1" max="31" value="1" aria-label="day">
+              <button id="btn-set-date">SET</button>
+            </div>
+          </div>
+
+          <div class="sim-block">
+            <label>View</label>
+            <div class="chip-row" id="view-chips">
+              <button class="chip on" data-view="labels">Labels</button>
+              <button class="chip on" data-view="orbits">Orbits</button>
+              <button class="chip on" data-view="moons">Moons</button>
+              <button class="chip on" data-view="trails">Trails</button>
+            </div>
+          </div>
+
+          <div class="sim-block">
+            <label for="track-sel">Auto-track</label>
+            <select id="track-sel"></select>
+          </div>
+
+          <div class="sim-block">
+            <label>Object separation</label>
+            <div class="sep-row">
+              <select id="sep-a"></select>
+              <span>→</span>
+              <select id="sep-b"></select>
+            </div>
+            <output id="sep-out">—</output>
+          </div>
+
+          <div class="sim-block">
+            <label>Quick actions</label>
+            <div class="quick-grid">
+              <button id="qa-asteroid">☄ Spawn asteroid</button>
+              <button id="qa-comet">✦ Spawn comet</button>
+              <button id="qa-trails">⌫ Clear trails</button>
+              <button id="qa-empty">🗑 Empty sky</button>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="panel" id="panel-create" style="display:none">
+        <div class="ctl">
+          <div class="row"><label>Body type</label></div>
+          <div id="type-grid"></div>
+        </div>
+
+        <div class="tworow">
+          <div class="field">
+            <label for="c-name">Name</label>
+            <input type="text" id="c-name" placeholder="auto" maxlength="24" autocomplete="off">
+          </div>
+          <div class="field">
+            <label for="c-color">Colour</label>
+            <input type="color" id="c-color" value="#5f9fe8">
+          </div>
+        </div>
+
+        <div class="ctl">
+          <div class="row"><label for="c-mass">Mass</label><output id="c-mass-out">1.00 Earth</output></div>
+          <input type="range" id="c-mass" min="-7" max="7" step="0.001" value="0">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="c-radius">Radius</label><output id="c-radius-out">6,371 km</output></div>
+          <input type="range" id="c-radius" min="1" max="6.5" step="0.001" value="3.8">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="c-dist">Orbit radius</label><output id="c-dist-out">1.50 AU</output></div>
+          <input type="range" id="c-dist" min="-1.3" max="2" step="0.001" value="0.176">
+        </div>
+
+        <div class="tworow">
+          <div class="field">
+            <label for="c-dir">Direction</label>
+            <select id="c-dir">
+              <option value="pro">Prograde</option>
+              <option value="retro">Retrograde</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="c-vel">Launch speed</label>
+            <select id="c-vel">
+              <option value="0.6">0.6 × circular</option>
+              <option value="0.85">0.85 ×</option>
+              <option value="1" selected>Circular</option>
+              <option value="1.2">1.2 ×</option>
+              <option value="1.414">Escape</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label><input type="checkbox" id="c-ring"> Give it rings</label>
+        </div>
+
+        <button id="btn-add" class="primary">＋ Add to sandbox</button>
+        <p class="hint">The new body is integrated live under gravity while the planets stay on their rails.</p>
+
+        <div class="ctl">
+          <div class="row"><label>Templates</label></div>
+          <div id="parts-list"></div>
+        </div>
+
+        <button id="btn-place">✛ Place by drag</button>
+        <p class="hint">Drag in the sky: press to set the position, drag to aim the velocity, release to launch.</p>
+      </section>
+
+      <section class="panel" id="panel-library" style="display:none">
+        <span id="library-current">—</span>
+
+        <div class="ctl">
+          <div class="row"><label>Texture packs</label></div>
+          <div id="pack-list"></div>
+        </div>
+
+        <div class="ctl">
+          <div class="row"><label>Scenarios</label></div>
+        </div>
+        <div id="preset-grid"></div>
+        <div class="lib-actions">
+          <button id="btn-export">⭳ Export scenario</button>
+          <button id="btn-import">⭱ Import…</button>
+        </div>
+        <input type="file" id="file-import" accept=".json,application/json" style="display:none">
+        <p class="lib-note">Scenarios are plain <code>.json</code> — share them like the desktop app's <code>.sims</code> files.</p>
+      </section>
+    </aside>
+  </div>
+
+  <footer id="statusbar">
+    <span id="status-count">0 bodies</span>
+    <span id="status-mode">ephemeris rails</span>
+    <span id="status-run">running</span>
+    <span class="kbd">SPACE play · drag pan · wheel zoom · dbl-click follow · F focus · T theme · M sound · C create · L library</span>
+    <span class="right"><span id="status-fps">60 fps</span><span id="status-size">—</span></span>
+  </footer>
+
+</div>
+
+<div id="help">
+  <div class="card">
+    <h2>Controls</h2>
+    <table>
+      <tr><td>Space</td><td>play / pause the simulation</td></tr>
+      <tr><td>drag</td><td>pan the view</td></tr>
+      <tr><td>wheel, +/−</td><td>zoom toward the cursor</td></tr>
+      <tr><td>click</td><td>select a body</td></tr>
+      <tr><td>double-click</td><td>select and follow a body</td></tr>
+      <tr><td>F</td><td>focus the selected body</td></tr>
+      <tr><td>T / F3</td><td>cycle the colour theme</td></tr>
+      <tr><td>M</td><td>mute / unmute sound</td></tr>
+      <tr><td>C / L</td><td>open the Create / Library tab</td></tr>
+      <tr><td>Delete</td><td>remove the selected body</td></tr>
+      <tr><td>Gravity chip</td><td>release every planet into live N-body gravity</td></tr>
+    </table>
+    <div class="foot"><button id="help-close" class="primary">Close</button></div>
+  </div>
+</div>
+
+<script src="js/data.js?v=1.0.1"></script>
+<script src="js/sim.js?v=1.0.1"></script>
+<script src="js/audio.js?v=1.0.1"></script>
+<script src="js/main.js?v=1.0.1"></script>
+</body>
+</html>
