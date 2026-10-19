@@ -292,8 +292,9 @@ class Simulation {
       return [ax, ay, az];
     };
 
-    // (re)use cached acceleration from the previous step when available
-    if (!dyn[0]._acc) for (const b of dyn) b._acc = [0, 0, 0];
+    // (re)use cached acceleration from the previous step when available;
+    // every body is checked because new bodies can join a live system
+    for (const b of dyn) if (!b._acc) b._acc = [0, 0, 0];
     for (let i = 0; i < dyn.length; i++) {
       const st = dyn[i].state;
       st.p[0] += st.v[0] * h + 0.5 * dyn[i]._acc[0] * h * h;

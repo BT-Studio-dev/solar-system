@@ -259,7 +259,8 @@ check(true, 'track + separation selects do not throw');
 els.get('view-chips').dispatch('click', { target: els.get('view-chips') });
 check(true, 'view chips do not throw');
 const frame = () => { let t = performance.now(); t += 16; if (rafCb) { const cb = rafCb; rafCb = null; cb(t); } };
-for (let i = 0; i < 3; i++) frame();
+frame();
+check(isFinite(Math.hypot(...sim.bodyPos(ast, sim.jd))), 'spawned body integrates without crashing (the _acc guard)');
 
 console.log(failures ? `\nFAILED (${failures})` : '\nALL SMOKE TESTS PASSED');
 process.exit(failures ? 1 : 0);

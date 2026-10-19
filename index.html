@@ -7,7 +7,7 @@
 <meta name="description" content="A real-time solar system simulator and N-body gravity sandbox in your browser: JPL approximate ephemerides, five colour themes, drop-in scenario files.">
 <meta name="theme-color" content="#0b111f">
 <link rel="icon" href="assets/icon.ico" sizes="any">
-<link rel="stylesheet" href="css/style.css?v=1.0.0">
+<link rel="stylesheet" href="css/style.css?v=1.0.1">
 </head>
 <body>
 <div id="boot-error" hidden></div>
@@ -21,7 +21,11 @@
     box.textContent = msg;
   }
   window.addEventListener('error', function (e) {
-    show('Script error: ' + (e.message || 'unknown') + ' — hard-refresh (Ctrl+Shift+R)');
+    var where = e.filename ? (e.filename.split('/').pop() + ':' + e.lineno) : '';
+    var stack = e.error && e.error.stack ? ('\n' + String(e.error.stack).split('\n').slice(0, 3).join('\n')) : '';
+    show('Script error' + (where ? ' @ ' + where : '') + ': ' + (e.message || 'unknown') +
+         ' — hard-refresh (Ctrl+Shift+R)' + stack);
+    box.style.whiteSpace = 'pre-wrap';
   });
   window.addEventListener('load', function () {
     setTimeout(function () {
@@ -294,9 +298,9 @@
   </div>
 </div>
 
-<script src="js/data.js?v=1.0.0"></script>
-<script src="js/sim.js?v=1.0.0"></script>
-<script src="js/audio.js?v=1.0.0"></script>
-<script src="js/main.js?v=1.0.0"></script>
+<script src="js/data.js?v=1.0.1"></script>
+<script src="js/sim.js?v=1.0.1"></script>
+<script src="js/audio.js?v=1.0.1"></script>
+<script src="js/main.js?v=1.0.1"></script>
 </body>
 </html>
